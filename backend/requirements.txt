@@ -1,0 +1,22 @@
+# FastAPI Framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# Database
+sqlmodel==0.0.22
+alembic==1.14.0
+pyodbc==5.2.0
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Utilities
+python-dotenv==1.0.1
+python-multipart==0.0.17
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# Email validation
+email-validator==2.2.0
+sqlmodel
