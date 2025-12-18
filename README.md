@@ -111,19 +111,8 @@ Copy output và cập nhật vào `.env`:
 ```env
 SECRET_KEY=<your-generated-secret-key>
 ```
+python e:\Python_Project\WebOrder\backend\test_connection.py
 
-### **6. Run Database Migrations**
-
-```powershell
-# Xem current version (should be empty)
-alembic current
-
-# Apply all migrations
-alembic upgrade head
-
-# Verify
-alembic current
-```
 
 Sau khi chạy, bạn sẽ thấy 8 tables trong database:
 - `users`
