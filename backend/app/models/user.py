@@ -1,0 +1,36 @@
+"""User model."""
+from datetime import datetime
+from typing import Optional, List, TYPE_CHECKING
+from sqlmodel import SQLModel, Field, Relationship
+
+from app.utils.enums import UserRole
+
+if TYPE_CHECKING:
+    from app.models.cart import Cart
+    from app.models.order import Order
+
+
+class User(SQLModel, table=True):
+    """User model - supports admin, staff, and student roles."""
+    __tablename__ = "users"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    email: str = Field(unique=True, index=True, max_length=255)
+    hashed_password: str = Field(max_length=255)
+    full_name: str = Field(max_length=255)
+    phone: Optional[str] = Field(default=None, max_length=20)
+    
+    role: UserRole = Field(default=UserRole.STUDENT)
+    is_active: bool = Field(default=True)
+    is_superuser: bool = Field(default=False)
+    
+    # Student-specific fields (optional)
+    student_id: Optional[str] = Field(default=None, max_length=50, index=True)
+    class_name: Optional[str] = Field(default=None, max_length=100)
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = Field(default=None)
+    
+    # Relationships
+    carts: List["Cart"] = Relationship(back_populates="user")
+    orders: List["Order"] = Relationship(back_populates="user")
