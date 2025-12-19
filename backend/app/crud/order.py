@@ -1,5 +1,5 @@
 """CRUD operations for Order model."""
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from sqlmodel import Session, select
 

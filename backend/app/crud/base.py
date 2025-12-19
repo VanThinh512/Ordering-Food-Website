@@ -24,7 +24,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self, db: Session, *, skip: int = 0, limit: int = 100
     ) -> List[ModelType]:
         """Get multiple records."""
-        statement = select(self.model).offset(skip).limit(limit)
+        statement = select(self.model).order_by(self.model.id).offset(skip).limit(limit)
         return db.exec(statement).all()
 
     def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
