@@ -111,8 +111,11 @@ Copy output và cập nhật vào `.env`:
 ```env
 SECRET_KEY=<your-generated-secret-key>
 ```
-python e:\Python_Project\WebOrder\backend\test_connection.py
+### **7. Test Connection**
 
+```powershell
+python e:\Python_Project\WebOrder\backend\test_connection.py
+```
 
 Sau khi chạy, bạn sẽ thấy 8 tables trong database:
 - `users`
@@ -124,18 +127,9 @@ Sau khi chạy, bạn sẽ thấy 8 tables trong database:
 - `orders`
 - `order_items`
 
-### **7. Test Connection**
 
-```powershell
-python test_db.py
-```
 
-Kết quả mong đợi:
-```
-✅ CONNECTION SUCCESSFUL!
-🖥️  Server: localhost\SQLEXPRESS
-🗄️  Database: WebOrderDB
-```
+
 
 ---
 
