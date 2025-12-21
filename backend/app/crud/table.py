@@ -23,6 +23,7 @@ class CRUDTable(CRUDBase[Table, TableCreate, TableUpdate]):
         statement = (
             select(Table)
             .where(Table.status == status)
+            .order_by(Table.id)
             .offset(skip)
             .limit(limit)
         )
