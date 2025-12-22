@@ -47,14 +47,14 @@ const LoginPage = () => {
 
                     <form onSubmit={handleSubmit} className="auth-form">
                         <div className="form-group">
-                            <label htmlFor="username">Tên đăng nhập hoặc Email</label>
+                            <label htmlFor="username">Email đăng nhập</label>
                             <input
                                 type="text"
                                 id="username"
                                 name="username"
                                 value={formData.username}
                                 onChange={handleChange}
-                                placeholder="Nhập tên đăng nhập hoặc email"
+                                placeholder="Email đăng nhập"
                                 required
                             />
                         </div>
