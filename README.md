@@ -111,18 +111,10 @@ Copy output và cập nhật vào `.env`:
 ```env
 SECRET_KEY=<your-generated-secret-key>
 ```
-
-### **6. Run Database Migrations**
+### **7. Test Connection**
 
 ```powershell
-# Xem current version (should be empty)
-alembic current
-
-# Apply all migrations
-alembic upgrade head
-
-# Verify
-alembic current
+python e:\Python_Project\WebOrder\backend\test_connection.py
 ```
 
 Sau khi chạy, bạn sẽ thấy 8 tables trong database:
@@ -135,18 +127,9 @@ Sau khi chạy, bạn sẽ thấy 8 tables trong database:
 - `orders`
 - `order_items`
 
-### **7. Test Connection**
 
-```powershell
-python test_db.py
-```
 
-Kết quả mong đợi:
-```
-✅ CONNECTION SUCCESSFUL!
-🖥️  Server: localhost\SQLEXPRESS
-🗄️  Database: WebOrderDB
-```
+
 
 ---
 

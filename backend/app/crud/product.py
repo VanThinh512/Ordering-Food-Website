@@ -17,6 +17,7 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductUpdate]):
         statement = (
             select(Product)
             .where(Product.category_id == category_id)
+            .order_by(Product.id)
             .offset(skip)
             .limit(limit)
         )
@@ -29,6 +30,7 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductUpdate]):
         statement = (
             select(Product)
             .where(Product.is_available == True)
+            .order_by(Product.id)
             .offset(skip)
             .limit(limit)
         )
@@ -41,6 +43,7 @@ class CRUDProduct(CRUDBase[Product, ProductCreate, ProductUpdate]):
         statement = (
             select(Product)
             .where(Product.name.contains(name))
+            .order_by(Product.id)
             .offset(skip)
             .limit(limit)
         )
