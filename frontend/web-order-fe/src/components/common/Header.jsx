@@ -14,6 +14,13 @@ const Header = () => {
 
     const cartItemCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
+    // Xử lý hiển thị tên
+    const displayName = user?.full_name || user?.username || 'User';
+
+    // Debug
+    console.log('Header - User:', user);
+    console.log('Header - Display Name:', displayName);
+
     return (
         <header className="header">
             <div className="container">
@@ -34,7 +41,7 @@ const Header = () => {
                             </Link>
                             <Link to="/orders" className="nav-link">Đơn hàng</Link>
                             <Link to="/profile" className="nav-link">
-                                👤 {user?.full_name || user?.username}
+                                👤 {displayName}
                             </Link>
                             <button onClick={handleLogout} className="btn-logout">
                                 Đăng xuất

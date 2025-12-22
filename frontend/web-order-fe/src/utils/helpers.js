@@ -269,6 +269,7 @@ export const isNumber = (value) => {
 export const parseJSON = (jsonString, defaultValue = null) => {
     try {
         return JSON.parse(jsonString);
+        // eslint-disable-next-line no-unused-vars
     } catch (error) {
         return defaultValue;
     }

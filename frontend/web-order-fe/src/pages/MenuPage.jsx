@@ -81,75 +81,90 @@ const MenuPage = () => {
 
     return (
         <div className="menu-page">
-            <div className="container">
-                <h1 className="page-title">Thực đơn</h1>
-
-                <div className="menu-search">
-                    <input
-                        type="text"
-                        placeholder="Tìm kiếm món ăn..."
-                        value={searchTerm}
-                        onChange={handleSearch}
-                        className="search-input"
-                    />
+            <div className="container menu-container">
+                <div className="menu-header">
+                    <span className="menu-kicker">Thực đơn hôm nay</span>
+                    <h1 className="page-title">Thực đơn</h1>
+                    <p className="menu-description">
+                        Chọn món yêu thích của bạn và đặt ngay để giữ trọn năng lượng cho ngày dài.
+                    </p>
                 </div>
 
-                <div className="category-filter">
-                    <button
-                        className={`category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
-                        onClick={() => handleCategoryChange('all')}
-                    >
-                        Tất cả
-                    </button>
-                    {categories.map((category) => (
+                <div className="menu-controls">
+                    <div className="menu-search">
+                        <span className="search-icon" aria-hidden="true">
+                            🔍
+                        </span>
+                        <input
+                            type="text"
+                            placeholder="Tìm kiếm món ăn..."
+                            value={searchTerm}
+                            onChange={handleSearch}
+                            className="search-input"
+                        />
+                    </div>
+
+                    <div className="category-filter">
                         <button
-                            key={category.id}
-                            className={`category-btn ${selectedCategory === category.id.toString() ? 'active' : ''}`}
-                            onClick={() => handleCategoryChange(category.id.toString())}
+                            className={`category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
+                            onClick={() => handleCategoryChange('all')}
                         >
-                            {category.name}
+                            Tất cả
                         </button>
-                    ))}
+                        {categories.map((category) => (
+                            <button
+                                key={category.id}
+                                className={`category-btn ${selectedCategory === category.id.toString() ? 'active' : ''}`}
+                                onClick={() => handleCategoryChange(category.id.toString())}
+                            >
+                                {category.name}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {loading ? (
-                    <div className="loading-container">
-                        <div className="loading-spinner"></div>
-                        <p>Đang tải...</p>
+                    <div className="menu-products-panel">
+                        <div className="loading-container">
+                            <div className="loading-spinner"></div>
+                            <p>Đang tải...</p>
+                        </div>
                     </div>
                 ) : (
-                    <div className="products-grid">
+                    <div className="menu-products-panel">
                         {products.length === 0 ? (
                             <p className="no-products">Không tìm thấy món ăn nào</p>
                         ) : (
-                            products.map((product) => (
-                                <div key={product.id} className="product-card">
-                                    <div className="product-image">
-                                        {product.image_url ? (
-                                            <img src={product.image_url} alt={product.name} />
-                                        ) : (
-                                            <div className="no-image">🍽️</div>
-                                        )}
-                                        {!product.is_available && (
-                                            <div className="out-of-stock">Hết hàng</div>
-                                        )}
-                                    </div>
-                                    <div className="product-info">
-                                        <h3 className="product-name">{product.name}</h3>
-                                        <p className="product-description">{product.description}</p>
-                                        <div className="product-footer">
-                                            <span className="product-price">{formatPrice(product.price)}</span>
-                                            <button
-                                                className="btn-add-to-cart"
-                                                onClick={() => handleAddToCart(product.id)}
-                                                disabled={!product.is_available}
-                                            >
-                                                {product.is_available ? 'Thêm vào giỏ' : 'Hết hàng'}
-                                            </button>
+                            <div className="products-grid">
+                                {products.map((product) => (
+                                    <div key={product.id} className="product-card">
+                                        <div className="product-image">
+                                            {product.image_url ? (
+                                                <img src={product.image_url} alt={product.name} />
+                                            ) : (
+                                                <div className="no-image">🍽️</div>
+                                            )}
+                                            {!product.is_available && (
+                                                <div className="out-of-stock">Hết hàng</div>
+                                            )}
+                                        </div>
+                                        <div className="product-info">
+                                            <h3 className="product-name">{product.name}</h3>
+                                            <p className="product-description">{product.description}</p>
+                                            <div className="product-footer">
+                                                <span className="product-price">{formatPrice(product.price)}</span>
+                                                <button
+                                                    className="btn-add-to-cart"
+                                                    onClick={() => handleAddToCart(product.id)}
+                                                    disabled={!product.is_available}
+                                                >
+                                                    {product.is_available ? 'Thêm vào giỏ' : 'Hết hàng'}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
+                                ))}
+                            </div>
                         )}
                     </div>
                 )}

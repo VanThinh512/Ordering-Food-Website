@@ -23,10 +23,21 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
-        if (error.response?.status === 401) {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
             localStorage.removeItem('access_token');
             window.location.href = '/login';
         }
+
+        // Log error for debugging
+        console.error('API Error:', {
+            url: error.config?.url,
+            status: error.response?.status,
+            data: error.response?.data
+        });
+
         return Promise.reject(error);
     }
 );

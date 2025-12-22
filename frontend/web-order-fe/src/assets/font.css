@@ -1,0 +1,9 @@
+/* Vietnamese Fonts */
+@font-face {
+    font-family: 'Be Vietnam Pro';
+    src: url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap');
+}
+
+body {
+    font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}

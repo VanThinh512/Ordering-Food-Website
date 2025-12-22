@@ -12,6 +12,12 @@ export const useAuthStore = create((set) => ({
             const data = await authService.login(username, password);
             localStorage.setItem('access_token', data.access_token);
             const user = await authService.getCurrentUser();
+
+            // Debug: Kiểm tra dữ liệu user
+            console.log('User data:', user);
+            console.log('Full name:', user.full_name);
+            console.log('Username:', user.username);
+
             set({ user, isAuthenticated: true, isLoading: false });
             return { success: true };
         } catch (error) {
@@ -43,8 +49,8 @@ export const useAuthStore = create((set) => ({
             try {
                 const user = await authService.getCurrentUser();
                 set({ user, isAuthenticated: true });
-                // eslint-disable-next-line no-unused-vars
             } catch (error) {
+                console.error('Error loading user:', error);
                 localStorage.removeItem('access_token');
                 set({ user: null, isAuthenticated: false });
             }
