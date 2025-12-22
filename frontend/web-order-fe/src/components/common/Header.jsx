@@ -30,6 +30,7 @@ const Header = () => {
 
                 <nav className="nav">
                     <Link to="/menu" className="nav-link">Menu</Link>
+                    <Link to="/tables" className="nav-link">Đặt bàn</Link> {/* Thêm */}
 
                     {isAuthenticated ? (
                         <>
@@ -46,6 +47,9 @@ const Header = () => {
                             <button onClick={handleLogout} className="btn-logout">
                                 Đăng xuất
                             </button>
+                            {user?.role === 'admin' && (
+                                <Link to="/admin/tables" className="nav-link">Quản lý bàn</Link>
+                            )}
                         </>
                     ) : (
                         <>
