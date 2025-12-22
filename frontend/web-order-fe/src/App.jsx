@@ -12,7 +12,10 @@ import MenuPage from './pages/MenuPage'
 import CartPage from './pages/CartPage'
 import OrdersPage from './pages/OrdersPage'
 import ProfilePage from './pages/ProfilePage'
+import TablesPage from './pages/TablesPage' // Thêm
+import TableManagementPage from './pages/adminpages/TableManagementPage' // Thêm
 import './App.css'
+import './style.css'
 
 function App() {
   const loadUser = useAuthStore((state) => state.loadUser)
@@ -39,6 +42,14 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/menu" element={<MenuPage />} />
           <Route
+            path="/tables"
+            element={
+              <ProtectedRoute>
+                <TablesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/cart"
             element={
               <ProtectedRoute>
@@ -59,6 +70,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tables"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <TableManagementPage />
               </ProtectedRoute>
             }
           />
