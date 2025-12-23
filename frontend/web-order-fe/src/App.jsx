@@ -14,6 +14,7 @@ import OrdersPage from './pages/OrdersPage'
 import ProfilePage from './pages/ProfilePage'
 import TablesPage from './pages/TablesPage' // Thêm
 import TableManagementPage from './pages/adminpages/TableManagementPage' // Thêm
+import DashBoard from './pages/adminpages/DashBoard'
 import './App.css'
 import './style.css'
 
@@ -78,6 +79,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <TableManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <DashBoard />
               </ProtectedRoute>
             }
           />
