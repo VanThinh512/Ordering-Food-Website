@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/authStore';
 
 const TablesPage = () => {
     const navigate = useNavigate();
-    const { availableTables, fetchAvailableTables, selectTable, isLoading } = useTableStore();
+    const { availableTables, fetchAllTables, selectTable, isLoading } = useTableStore();
     const { isAuthenticated } = useAuthStore();
     const [selectedTableId, setSelectedTableId] = useState(null);
     const [filter, setFilter] = useState('all');
@@ -19,18 +19,25 @@ const TablesPage = () => {
     }, [isAuthenticated]);
 
     const loadTables = async () => {
-        await fetchAvailableTables();
+        // Lấy TẤT CẢ bàn, không chỉ available
+        await fetchAllTables();
     };
 
     const handleSelectTable = (table) => {
+        // Chỉ cho phép chọn bàn available
         if (table.status === 'available') {
             setSelectedTableId(table.id);
+        } else {
+            alert(`Bàn này đang ở trạng thái: ${table.status === 'occupied' ? 'Đang sử dụng' :
+                    table.status === 'reserved' ? 'Đã đặt trước' : table.status
+                }`);
         }
     };
 
     const handleConfirmTable = () => {
         const table = availableTables.find(t => t.id === selectedTableId);
         if (table) {
+            console.log('✅ Confirming table selection:', table);
             selectTable(table);
             navigate('/menu');
         }

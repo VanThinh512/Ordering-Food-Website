@@ -1,58 +1,98 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import productService from '../services/Product';
 import categoryService from '../services/Category';
 import { useCartStore } from '../stores/cartStore';
 import { useAuthStore } from '../stores/authStore';
+import { useTableStore } from '../stores/tableStore';
 import { formatPrice } from '../utils/helpers';
 
 const MenuPage = () => {
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [products, setProducts] = useState([]);
+    const [allProducts, setAllProducts] = useState([]); // Lưu tất cả sản phẩm
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [addingProductId, setAddingProductId] = useState(null);
 
     const addToCart = useCartStore((state) => state.addToCart);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    const { selectedTable, getSelectedTable } = useTableStore();
 
     useEffect(() => {
-        fetchCategories();
-    }, []);
-
-    useEffect(() => {
-        fetchProducts();
-    }, [selectedCategory, searchTerm]);
-
-    const fetchCategories = async () => {
-        try {
-            const data = await categoryService.getAll();
-            setCategories(data);
-        } catch (error) {
-            console.error('Error fetching categories:', error);
+        // Kiểm tra authentication
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
         }
-    };
 
-    const fetchProducts = async () => {
+        // Kiểm tra đã chọn bàn chưa
+        const table = getSelectedTable();
+        console.log('📍 Current selected table:', table);
+
+        // Load dữ liệu ban đầu
+        loadInitialData();
+    }, [isAuthenticated]);
+
+    // Filter products khi thay đổi category hoặc search
+    useEffect(() => {
+        filterProducts();
+    }, [selectedCategory, searchTerm, allProducts]);
+
+    const loadInitialData = async () => {
         setLoading(true);
         try {
-            let data;
-            if (selectedCategory && selectedCategory !== 'all') {
-                data = await productService.getByCategory(selectedCategory);
-            } else {
-                data = await productService.getAll({ search: searchTerm });
-            }
-            setProducts(data);
+            const [categoriesData, productsData] = await Promise.all([
+                categoryService.getAll(),
+                productService.getAll()
+            ]);
+
+            setCategories(categoriesData);
+            setAllProducts(productsData);
+            console.log('✅ Loaded initial data:', {
+                categories: categoriesData.length,
+                products: productsData.length
+            });
         } catch (error) {
-            console.error('Error fetching products:', error);
+            console.error('Error loading initial data:', error);
+            alert('Không thể tải dữ liệu. Vui lòng thử lại.');
         } finally {
             setLoading(false);
         }
     };
 
+    const filterProducts = () => {
+        let filtered = [...allProducts];
+
+        // Lọc theo category
+        if (selectedCategory && selectedCategory !== 'all') {
+            filtered = filtered.filter(product =>
+                product.category_id === parseInt(selectedCategory)
+            );
+            console.log(`🔍 Filtered by category ${selectedCategory}:`, filtered.length);
+        }
+
+        // Lọc theo search term
+        if (searchTerm.trim()) {
+            const term = searchTerm.toLowerCase().trim();
+            filtered = filtered.filter(product =>
+                product.name.toLowerCase().includes(term) ||
+                (product.description && product.description.toLowerCase().includes(term))
+            );
+            console.log(`🔍 Filtered by search "${searchTerm}":`, filtered.length);
+        }
+
+        setProducts(filtered);
+    };
+
     const handleCategoryChange = (categoryId) => {
+        console.log('📂 Category changed to:', categoryId);
         setSelectedCategory(categoryId);
+
+        // Cập nhật URL params
         if (categoryId === 'all') {
             searchParams.delete('category');
         } else {
@@ -61,27 +101,175 @@ const MenuPage = () => {
         setSearchParams(searchParams);
     };
 
-    const handleAddToCart = async (productId) => {
+    const handleSearch = (e) => {
+        const value = e.target.value;
+        console.log('🔍 Search term:', value);
+        setSearchTerm(value);
+    };
+
+    const handleClearSearch = () => {
+        setSearchTerm('');
+    };
+
+    const handleAddToCart = async (product) => {
+        // Kiểm tra đăng nhập
         if (!isAuthenticated) {
             alert('Vui lòng đăng nhập để thêm vào giỏ hàng');
+            navigate('/login');
             return;
         }
 
-        const result = await addToCart(productId, 1);
-        if (result.success) {
-            alert('Đã thêm vào giỏ hàng');
-        } else {
-            alert(result.error || 'Không thể thêm vào giỏ hàng');
+        // Kiểm tra đã chọn bàn chưa
+        const table = getSelectedTable();
+        if (!table) {
+            alert('⚠️ Vui lòng chọn bàn trước khi đặt món!');
+            navigate('/tables');
+            return;
+        }
+
+        try {
+            setAddingProductId(product.id);
+            console.log('🛒 Adding product to cart:', {
+                product: product.name,
+                table: `Bàn ${table.number}`,
+                price: product.price
+            });
+
+            // Gọi addToCart với đầy đủ thông tin
+            await addToCart({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                image_url: product.image_url,
+                quantity: 1,
+                tableId: table.id,
+                tableName: `Bàn ${table.number}`
+            });
+
+            // Hiển thị thông báo thành công
+            showToast(`✅ Đã thêm ${product.name} vào giỏ hàng`);
+        } catch (error) {
+            console.error('❌ Failed to add to cart:', error);
+            alert(error.message || 'Không thể thêm vào giỏ hàng');
+        } finally {
+            setAddingProductId(null);
         }
     };
 
-    const handleSearch = (e) => {
-        setSearchTerm(e.target.value);
+    const showToast = (message) => {
+        // Tạo toast notification đơn giản
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #28a745;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10000;
+            animation: slideInUp 0.3s ease-out;
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    };
+
+    // Render table banner nếu đã chọn bàn
+    const renderTableBanner = () => {
+        if (!selectedTable) {
+            return (
+                <div style={{
+                    background: '#fff3cd',
+                    border: '2px solid #ffc107',
+                    borderRadius: '12px',
+                    padding: '1rem 1.5rem',
+                    marginBottom: '1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <span style={{ fontSize: '2rem' }}>⚠️</span>
+                        <span style={{ fontWeight: '600', color: '#856404' }}>
+                            Bạn chưa chọn bàn
+                        </span>
+                    </div>
+                    <button
+                        onClick={() => navigate('/tables')}
+                        style={{
+                            padding: '0.75rem 1.5rem',
+                            background: '#ffc107',
+                            color: '#856404',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Chọn bàn ngay
+                    </button>
+                </div>
+            );
+        }
+
+        return (
+            <div style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                borderRadius: '12px',
+                padding: '1rem 1.5rem',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{ fontSize: '2rem' }}>🪑</span>
+                    <div>
+                        <p style={{ margin: 0, fontSize: '0.875rem', opacity: 0.9 }}>
+                            Bàn đã chọn
+                        </p>
+                        <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>
+                            Bàn {selectedTable.number} - {selectedTable.location}
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onClick={() => navigate('/tables')}
+                    style={{
+                        padding: '0.75rem 1.5rem',
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        color: 'white',
+                        border: '2px solid white',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Đổi bàn
+                </button>
+            </div>
+        );
+    };
+
+    // Đếm số sản phẩm theo category
+    const getCategoryCount = (categoryId) => {
+        if (categoryId === 'all') return allProducts.length;
+        return allProducts.filter(p => p.category_id === categoryId).length;
     };
 
     return (
         <div className="menu-page">
             <div className="container menu-container">
+                {/* Table Selection Banner */}
+                {renderTableBanner()}
+
                 <div className="menu-header">
                     <span className="menu-kicker">Thực đơn hôm nay</span>
                     <h1 className="page-title">Thực đơn</h1>
@@ -102,6 +290,15 @@ const MenuPage = () => {
                             onChange={handleSearch}
                             className="search-input"
                         />
+                        {searchTerm && (
+                            <button
+                                className="clear-search-btn"
+                                onClick={handleClearSearch}
+                                title="Xóa tìm kiếm"
+                            >
+                                ✕
+                            </button>
+                        )}
                     </div>
 
                     <div className="category-filter">
@@ -110,6 +307,7 @@ const MenuPage = () => {
                             onClick={() => handleCategoryChange('all')}
                         >
                             Tất cả
+                            <span className="category-count">({getCategoryCount('all')})</span>
                         </button>
                         {categories.map((category) => (
                             <button
@@ -118,10 +316,46 @@ const MenuPage = () => {
                                 onClick={() => handleCategoryChange(category.id.toString())}
                             >
                                 {category.name}
+                                <span className="category-count">({getCategoryCount(category.id)})</span>
                             </button>
                         ))}
                     </div>
                 </div>
+
+                {/* Hiển thị filter info */}
+                {(searchTerm || selectedCategory !== 'all') && (
+                    <div className="filter-info">
+                        <span className="filter-text">
+                            {searchTerm && (
+                                <>
+                                    Tìm kiếm: <strong>"{searchTerm}"</strong>
+                                    {selectedCategory !== 'all' && ' • '}
+                                </>
+                            )}
+                            {selectedCategory !== 'all' && (
+                                <>
+                                    Danh mục: <strong>
+                                        {categories.find(c => c.id.toString() === selectedCategory)?.name}
+                                    </strong>
+                                </>
+                            )}
+                        </span>
+                        <span className="result-count">
+                            {products.length} món ăn
+                        </span>
+                        <button
+                            className="clear-filters-btn"
+                            onClick={() => {
+                                setSearchTerm('');
+                                setSelectedCategory('all');
+                                searchParams.delete('category');
+                                setSearchParams(searchParams);
+                            }}
+                        >
+                            Xóa bộ lọc
+                        </button>
+                    </div>
+                )}
 
                 {loading ? (
                     <div className="menu-products-panel">
@@ -133,7 +367,27 @@ const MenuPage = () => {
                 ) : (
                     <div className="menu-products-panel">
                         {products.length === 0 ? (
-                            <p className="no-products">Không tìm thấy món ăn nào</p>
+                            <div className="no-products">
+                                <div className="no-products-icon">🔍</div>
+                                <h3>Không tìm thấy món ăn nào</h3>
+                                <p>
+                                    {searchTerm
+                                        ? `Không có món ăn nào phù hợp với "${searchTerm}"`
+                                        : 'Danh mục này chưa có món ăn'
+                                    }
+                                </p>
+                                <button
+                                    className="btn-reset-filter"
+                                    onClick={() => {
+                                        setSearchTerm('');
+                                        setSelectedCategory('all');
+                                        searchParams.delete('category');
+                                        setSearchParams(searchParams);
+                                    }}
+                                >
+                                    Xem tất cả món ăn
+                                </button>
+                            </div>
                         ) : (
                             <div className="products-grid">
                                 {products.map((product) => (
@@ -155,10 +409,16 @@ const MenuPage = () => {
                                                 <span className="product-price">{formatPrice(product.price)}</span>
                                                 <button
                                                     className="btn-add-to-cart"
-                                                    onClick={() => handleAddToCart(product.id)}
-                                                    disabled={!product.is_available}
+                                                    onClick={() => handleAddToCart(product)}
+                                                    disabled={!product.is_available || addingProductId === product.id}
                                                 >
-                                                    {product.is_available ? 'Thêm vào giỏ' : 'Hết hàng'}
+                                                    {addingProductId === product.id ? (
+                                                        'Đang thêm...'
+                                                    ) : product.is_available ? (
+                                                        'Thêm vào giỏ'
+                                                    ) : (
+                                                        'Hết hàng'
+                                                    )}
                                                 </button>
                                             </div>
                                         </div>
