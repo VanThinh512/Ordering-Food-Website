@@ -16,6 +16,7 @@ const Header = () => {
 
     // Xử lý hiển thị tên
     const displayName = user?.full_name || user?.username || 'User';
+    const isAdmin = user?.role === 'admin';
 
     // Debug
     console.log('Header - User:', user);
@@ -28,7 +29,7 @@ const Header = () => {
                     <h1>🍔 School Food Order</h1>
                 </Link>
 
-                <nav className="nav">
+                <nav className={`nav ${isAuthenticated ? 'nav-auth' : ''}`}>
                     <Link to="/menu" className="nav-link">Menu</Link>
                     <Link to="/tables" className="nav-link">Đặt bàn</Link> {/* Thêm */}
 
@@ -41,15 +42,20 @@ const Header = () => {
                                 )}
                             </Link>
                             <Link to="/orders" className="nav-link">Đơn hàng</Link>
-                            <Link to="/profile" className="nav-link">
-                                👤 {displayName}
-                            </Link>
+                            {isAdmin ? (
+                                <>
+                                    <Link to="/admin/dashboard" className="nav-link nav-admin-link">
+                                        <span className="nav-user-name">👤 System Administrator</span>
+                                    </Link>
+                                </>
+                            ) : (
+                                <Link to="/profile" className="nav-link nav-user-link">
+                                    <span className="nav-user-name">{displayName}</span>
+                                </Link>
+                            )}
                             <button onClick={handleLogout} className="btn-logout">
                                 Đăng xuất
                             </button>
-                            {user?.role === 'admin' && (
-                                <Link to="/admin/tables" className="nav-link">Quản lý bàn</Link>
-                            )}
                         </>
                     ) : (
                         <>

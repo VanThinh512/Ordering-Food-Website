@@ -6,6 +6,11 @@ const orderService = {
         return response.data;
     },
 
+    getAll: async (params = {}) => {
+        const response = await api.get('/orders/', { params });
+        return response.data;
+    },
+
     getMyOrders: async (params = {}) => {
         const response = await api.get('/orders/my-orders', { params });
         return response.data;
