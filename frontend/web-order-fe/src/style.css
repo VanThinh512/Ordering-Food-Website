@@ -3904,6 +3904,355 @@ gap: 2rem;
     box-shadow: 0 15px 35px rgba(5, 6, 17, 0.6);
 }
 
+.reservation-panel {
+    margin-top: 3rem;
+    padding: 2.5rem;
+    border-radius: 32px;
+    background: radial-gradient(circle at top left, rgba(86, 76, 255, 0.25), rgba(6, 8, 22, 0.9));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 35px 55px rgba(4, 5, 15, 0.7);
+    color: #fff;
+}
+.reservation-controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+    width: 100%;
+}
+
+.control-card {
+    position: relative;
+    border-radius: 24px;
+    padding: 1.25rem 1.5rem 1.4rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 30px 45px rgba(4, 5, 15, 0.55);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    isolation: isolate;
+    min-height: 170px;
+}
+
+.control-header {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.control-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(146, 120, 255, 0.5), rgba(86, 76, 255, 0.4));
+    display: grid;
+    place-items: center;
+    font-size: 1.2rem;
+    box-shadow: 0 10px 25px rgba(86, 76, 255, 0.3);
+}
+
+.control-eyebrow {
+    margin: 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: rgba(226, 232, 240, 0.6);
+}
+
+.control-value {
+    margin: 0.25rem 0 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.control-field {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.control-input {
+    width: 100%;
+    background: rgba(5, 7, 20, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 0.9rem 1rem;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    outline: none;
+    transition: border 0.2s, box-shadow 0.2s;
+}
+
+.control-input:focus {
+    border-color: rgba(146, 120, 255, 0.9);
+    box-shadow: 0 0 0 4px rgba(146, 120, 255, 0.2);
+}
+
+.select-field {
+    position: relative;
+}
+
+.select-input {
+    appearance: none;
+    padding-right: 2.5rem;
+    cursor: pointer;
+}
+
+.select-arrow {
+    position: absolute;
+    right: 1rem;
+    font-size: 1rem;
+    pointer-events: none;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.select-input::-ms-expand {
+    display: none;
+}
+
+.confirm-control {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: inherit;
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    min-height: 170px;
+    text-align: left;
+}
+
+.confirm-control:hover .confirm-glow {
+    transform: scale(1.15);
+    opacity: 0.9;
+}
+
+.confirm-glow {
+    position: absolute;
+    inset: -50%;
+    background: radial-gradient(circle, rgba(255, 107, 107, 0.5), rgba(255, 107, 107, 0));
+    opacity: 0.6;
+    transition: transform 0.4s, opacity 0.4s;
+    z-index: -1;
+}
+
+.confirm-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.confirm-eyebrow {
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.confirm-content strong {
+    font-size: 1.6rem;
+}
+
+.confirm-caption {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.9rem;
+}
+
+.confirm-arrow {
+    font-size: 2rem;
+    opacity: 0.9;
+    transition: transform 0.3s;
+}
+
+.confirm-control:hover .confirm-arrow {
+    transform: translateX(6px);
+}
+
+@media (max-width: 640px) {
+    .control-card {
+        min-height: unset;
+        padding: 1rem 1.25rem;
+    }
+
+    .control-value {
+        font-size: 1rem;
+    }
+}
+
+.slot-grid {
+    margin-top: 1.75rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+}
+.slot-card {
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(5, 6, 17, 0.75);
+    color: #fff;
+    padding: 1rem 1.25rem;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.25s, border 0.25s, box-shadow 0.25s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    position: relative;
+    overflow: hidden;
+}
+.slot-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent);
+    opacity: 0;
+    transition: opacity 0.25s;
+}
+.slot-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+.slot-card:hover::before,
+.slot-card.selected::before {
+    opacity: 1;
+}
+.slot-card.selected {
+    border-color: rgba(146, 120, 255, 0.9);
+    box-shadow: 0 15px 30px rgba(132, 106, 255, 0.35);
+}
+.slot-card.status-mine {
+    border-color: rgba(255, 209, 102, 0.7);
+    background: linear-gradient(135deg, rgba(255, 209, 102, 0.2), rgba(5, 6, 17, 0.85));
+}
+.slot-card.status-free {
+    border-color: rgba(46, 213, 115, 0.25);
+}
+.slot-card.status-booked {
+    cursor: not-allowed;
+    opacity: 0.65;
+    background: rgba(255, 255, 255, 0.04);
+}
+.slot-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.slot-badge {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(146, 120, 255, 0.2);
+    border: 1px solid rgba(146, 120, 255, 0.8);
+}
+.slot-status {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.95rem;
+    color: rgba(226, 232, 240, 0.85);
+}
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+.dot-free { background: #2ed573; }
+.dot-mine { background: #ffd166; }
+.dot-booked { background: #ff6b6b; }
+
+.slot-grid {
+    margin-top: 1.75rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+}
+.slot-card {
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(5, 6, 17, 0.75);
+    color: #fff;
+    padding: 1rem 1.25rem;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.25s, border 0.25s, box-shadow 0.25s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    position: relative;
+    overflow: hidden;
+}
+.slot-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent);
+    opacity: 0;
+    transition: opacity 0.25s;
+}
+.slot-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+.slot-card:hover::before,
+.slot-card.selected::before {
+    opacity: 1;
+}
+.slot-card.selected {
+    border-color: rgba(146, 120, 255, 0.9);
+    box-shadow: 0 15px 30px rgba(132, 106, 255, 0.35);
+}
+.slot-card.status-mine {
+    border-color: rgba(255, 209, 102, 0.7);
+    background: linear-gradient(135deg, rgba(255, 209, 102, 0.2), rgba(5, 6, 17, 0.85));
+}
+.slot-card.status-free {
+    border-color: rgba(46, 213, 115, 0.25);
+}
+.slot-card.status-booked {
+    cursor: not-allowed;
+    opacity: 0.65;
+    background: rgba(255, 255, 255, 0.04);
+}
+.slot-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.slot-badge {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(146, 120, 255, 0.2);
+    border: 1px solid rgba(146, 120, 255, 0.8);
+}
+.slot-status {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.95rem;
+    color: rgba(226, 232, 240, 0.85);
+}
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+.dot-free { background: #2ed573; }
+.dot-mine { background: #ffd166; }
+.dot-booked { background: #ff6b6b; }
+
+
 @media (max-width: 1024px) {
     .admin-dashboard-layout {
         grid-template-columns: 1fr;
@@ -3959,4 +4308,6 @@ gap: 2rem;
     .table-filters {
         justify-content: flex-start;
     }
+
+    
 }

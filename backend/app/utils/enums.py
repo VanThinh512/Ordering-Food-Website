@@ -31,3 +31,12 @@ class TableStatus(str, Enum):
     AVAILABLE = "available"
     OCCUPIED = "occupied"
     RESERVED = "reserved"
+
+
+class ReservationStatus(str, Enum):
+    """Reservation status types."""
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"

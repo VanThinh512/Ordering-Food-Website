@@ -46,7 +46,7 @@ class OrderBase(BaseModel):
 
 class OrderCreate(OrderBase):
     """Order creation schema."""
-    pass
+    reservation_id: Optional[int] = None
 
 
 class OrderUpdate(BaseModel):

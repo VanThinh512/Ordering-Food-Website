@@ -22,7 +22,15 @@ const CartPage = () => {
     } = useCartStore();
 
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-    const { getSelectedTable, clearSelectedTable } = useTableStore();
+    const {
+        getSelectedTable,
+        clearSelectedTable,
+        getSelectedReservation,
+        selectedReservation,
+        cancelReservation,
+        clearReservation,
+        ensureReservation
+    } = useTableStore();
     const selectedTableFromStore = useTableStore((state) => state.selectedTable);
 
     useEffect(() => {
@@ -35,6 +43,7 @@ const CartPage = () => {
         const table = getSelectedTable();
         console.log('🪑 Selected table from store:', table);
         setCurrentTable(table);
+        getSelectedReservation();
 
         // Load cart from server
         console.log('📦 Loading cart...');
@@ -92,6 +101,15 @@ const CartPage = () => {
             )
         ) {
             await clearCart();
+            if (selectedReservation) {
+                try {
+                    await cancelReservation();
+                } catch (error) {
+                    console.error('Không thể hủy giữ bàn:', error);
+                }
+            } else {
+                clearReservation();
+            }
             clearSelectedTable();
             setCurrentTable(null);
         }
@@ -107,6 +125,12 @@ const CartPage = () => {
             return;
         }
 
+        if (!selectedReservation || selectedReservation.table_id !== table.id) {
+            alert('Vui lòng giữ bàn và chọn khung giờ trước khi đặt hàng.');
+            navigate('/tables');
+            return;
+        }
+
         if (items.length === 0) {
             alert('Giỏ hàng trống');
             return;
@@ -117,9 +141,13 @@ const CartPage = () => {
         try {
             const token = localStorage.getItem('access_token') || localStorage.getItem('token');
 
+            // Đảm bảo reservation đã được tạo (nếu mới chỉ giữ tạm)
+            const confirmedReservation = await ensureReservation();
+
             // Chuẩn bị dữ liệu order
             const orderData = {
                 table_id: table.id,
+                reservation_id: confirmedReservation.id,
                 items: items.map(item => ({
                     product_id: item.product_id,
                     quantity: item.quantity,
@@ -156,8 +184,7 @@ const CartPage = () => {
 
             // Clear cart after successful order
             await clearCart();
-
-            // Clear selected table
+            await cancelReservation().catch(() => clearReservation());
             clearSelectedTable();
 
             // Navigate to orders page
@@ -218,7 +245,9 @@ const CartPage = () => {
                             <div>
                                 <p className="chip-label">Trạng thái bàn</p>
                                 <strong>
-                                    {currentTable ? `Bàn ${currentTable.number}` : 'Chưa chọn bàn'}
+                                    {currentTable
+                                        ? `Bàn ${currentTable.table_number || currentTable.number}`
+                                        : 'Chưa chọn bàn'}
                                 </strong>
                                 <span className="chip-subtext">
                                     {currentTable?.location || 'Vui lòng chọn bàn để đặt món'}
@@ -230,6 +259,40 @@ const CartPage = () => {
                                 </button>
                             )}
                         </div>
+                        {currentTable && (
+                            <div className={`reservation-chip-card ${selectedReservation ? 'active' : 'warning'}`}>
+                                <div>
+                                    <p className="chip-label">Khung giờ giữ bàn</p>
+                                    {selectedReservation ? (
+                                        <strong>
+                                            {new Date(selectedReservation.start_time).toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                            {' - '}
+                                            {new Date(selectedReservation.end_time).toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </strong>
+                                    ) : (
+                                        <strong>Chưa giữ khung giờ</strong>
+                                    )}
+                                    <span className="chip-subtext">
+                                        {selectedReservation ? 'Bàn sẽ tự hủy nếu quá giờ đã giữ' : 'Hãy chọn khung giờ tại trang Bàn'}
+                                    </span>
+                                </div>
+                                {!selectedReservation ? (
+                                    <button className="chip-action" onClick={() => navigate('/tables')}>
+                                        Giữ bàn
+                                    </button>
+                                ) : (
+                                    <button className="chip-action" onClick={handleCancelTable}>
+                                        Hủy giữ & làm mới
+                                    </button>
+                                )}
+                            </div>
+                        )}
                         <div className="cart-hero-metrics">
                             <div className="cart-metric">
                                 <span>Món đã chọn</span>
@@ -341,7 +404,9 @@ const CartPage = () => {
                                 <div className="summary-item">
                                     <span>Bàn ăn</span>
                                     {currentTable ? (
-                                        <strong>Bàn {currentTable.number}</strong>
+                                        <strong>
+                                            Bàn {currentTable.table_number || currentTable.number}
+                                        </strong>
                                     ) : (
                                         <button className="chip-action" onClick={() => navigate('/tables')}>
                                             Chọn bàn

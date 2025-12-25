@@ -205,7 +205,7 @@ const MenuPage = () => {
                     <div>
                         <p className="banner-eyebrow">Bàn đã chọn</p>
                         <h3>
-                            Bàn {selectedTable.number} - {selectedTable.location}
+                            Bàn {selectedTable.table_number || selectedTable.number} - {selectedTable.location}
                         </h3>
                     </div>
                 </div>
@@ -253,12 +253,18 @@ const MenuPage = () => {
                     <aside className="menu-side-panel">
                         <div className="menu-hero-card glass-panel">
                             <div className="hero-card-metric">
-                                <span>Đang mở bán</span>
+                                <span>Đang mở bán </span>
                                 <strong>{products.length || allProducts.length} món</strong>
                             </div>
                             <div className="hero-card-status">
                                 <p>Hôm nay có {categories.length} nhóm món.</p>
-                                <p>Bàn {selectedTable ? selectedTable.number : 'chưa chọn'}.</p>
+                                <p>
+                                    Bàn{' '}
+                                    {selectedTable
+                                        ? selectedTable.table_number || selectedTable.number
+                                        : 'chưa chọn'}
+                                    .
+                                </p>
                             </div>
                         </div>
                         <div className="menu-stats-card glass-panel">
