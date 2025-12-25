@@ -2591,6 +2591,30 @@ gap: 2rem;
     transform: translateX(2px);
 }
 
+.btn-cancel-table {
+    width: 100%;
+    padding: 0.85rem;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 107, 107, 0.35);
+    background: rgba(255, 107, 107, 0.1);
+    color: #ffb3b3;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.3s, background 0.3s, color 0.3s, transform 0.3s;
+}
+
+.btn-cancel-table:hover:not(:disabled) {
+    border-color: rgba(255, 107, 107, 0.7);
+    background: rgba(255, 107, 107, 0.2);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.btn-cancel-table:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 /* Orders Page */
 .orders-page {
     min-height: calc(100vh - 200px);

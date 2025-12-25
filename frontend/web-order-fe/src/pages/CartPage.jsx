@@ -85,6 +85,18 @@ const CartPage = () => {
         }
     };
 
+    const handleCancelTable = async () => {
+        if (
+            window.confirm(
+                'Bạn có chắc muốn hủy bàn và xóa toàn bộ món đã chọn?'
+            )
+        ) {
+            await clearCart();
+            clearSelectedTable();
+            setCurrentTable(null);
+        }
+    };
+
     const handleCheckout = async () => {
         const table = getSelectedTable();
         console.log('🔍 Checking out with table:', table);
@@ -348,24 +360,59 @@ const CartPage = () => {
 
                             <div className="summary-divider"></div>
 
-                            <button
-                                className="btn-checkout"
-                                onClick={handleCheckout}
-                                disabled={isSubmitting || items.length === 0 || !currentTable}
-                            >
-                                {isSubmitting ? 'Đang xử lý...' : 'Đặt hàng ngay'}
-                            </button>
+                            <div className="summary-total">
+                                <span>Tổng cộng</span>
+                                <strong>{formatPrice(getTotal())}</strong>
+                            </div>
 
-                            <button className="btn-continue" onClick={() => navigate('/menu')}>
-                                Tiếp tục chọn món
-                            </button>
-                        </div>
-                    </aside>
-                </div>
-            )}
+                            <div className="notes-section">
+                                <div className="notes-header">
+                                    <div>
+                                        <p className="notes-label">Ghi chú cho bếp</p>
+                                        <span className="notes-helper">
+                                            Thêm yêu cầu đặc biệt để bếp chuẩn bị chính xác.
+                                        </span>
+                                    </div>
+                                    <span className="notes-char-count">{notes.length}/200</span>
+                                </div>
+                                <textarea
+                                    id="notes"
+                                    rows="3"
+                                    maxLength={200}
+                                    placeholder="Ví dụ: Ít cay, thêm chanh, giao món trước 11h30..."
+                                    value={notes}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                    className="notes-input"
+                                />
+                            </div>
+
+                            <div className="cart-actions">
+                                <button
+                                    className="btn-checkout"
+                                    onClick={handleCheckout}
+                                    disabled={isSubmitting || items.length === 0 || !currentTable}
+                                >
+                                    {isSubmitting ? 'Đang xử lý...' : 'Đặt hàng ngay'}
+                                </button>
+
+                                <button className="btn-continue" onClick={() => navigate('/menu')}>
+                                    Tiếp tục chọn món
+                                </button>
+
+                                <button
+                                    className="btn-cancel-table"
+                                    onClick={handleCancelTable}
+                                    disabled={items.length === 0 && !currentTable}
+                                >
+                                    Hủy bàn & làm trống giỏ
+                                </button>
+                            </div>
+                        </aside>
+                    </div>
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
 };
 
 export default CartPage;
