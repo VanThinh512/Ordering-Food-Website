@@ -22,7 +22,15 @@ const CartPage = () => {
     } = useCartStore();
 
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-    const { getSelectedTable, clearSelectedTable } = useTableStore();
+    const {
+        getSelectedTable,
+        clearSelectedTable,
+        getSelectedReservation,
+        selectedReservation,
+        cancelReservation,
+        clearReservation,
+        ensureReservation
+    } = useTableStore();
     const selectedTableFromStore = useTableStore((state) => state.selectedTable);
 
     useEffect(() => {
@@ -35,6 +43,7 @@ const CartPage = () => {
         const table = getSelectedTable();
         console.log('🪑 Selected table from store:', table);
         setCurrentTable(table);
+        getSelectedReservation();
 
         // Load cart from server
         console.log('📦 Loading cart...');
@@ -85,12 +94,39 @@ const CartPage = () => {
         }
     };
 
+    const handleCancelTable = async () => {
+        if (
+            window.confirm(
+                'Bạn có chắc muốn hủy bàn và xóa toàn bộ món đã chọn?'
+            )
+        ) {
+            await clearCart();
+            if (selectedReservation) {
+                try {
+                    await cancelReservation();
+                } catch (error) {
+                    console.error('Không thể hủy giữ bàn:', error);
+                }
+            } else {
+                clearReservation();
+            }
+            clearSelectedTable();
+            setCurrentTable(null);
+        }
+    };
+
     const handleCheckout = async () => {
         const table = getSelectedTable();
         console.log('🔍 Checking out with table:', table);
 
         if (!table) {
             alert('Vui lòng chọn bàn trước khi đặt hàng');
+            navigate('/tables');
+            return;
+        }
+
+        if (!selectedReservation || selectedReservation.table_id !== table.id) {
+            alert('Vui lòng giữ bàn và chọn khung giờ trước khi đặt hàng.');
             navigate('/tables');
             return;
         }
@@ -105,9 +141,13 @@ const CartPage = () => {
         try {
             const token = localStorage.getItem('access_token') || localStorage.getItem('token');
 
+            // Đảm bảo reservation đã được tạo (nếu mới chỉ giữ tạm)
+            const confirmedReservation = await ensureReservation();
+
             // Chuẩn bị dữ liệu order
             const orderData = {
                 table_id: table.id,
+                reservation_id: confirmedReservation.id,
                 items: items.map(item => ({
                     product_id: item.product_id,
                     quantity: item.quantity,
@@ -144,8 +184,7 @@ const CartPage = () => {
 
             // Clear cart after successful order
             await clearCart();
-
-            // Clear selected table
+            await cancelReservation().catch(() => clearReservation());
             clearSelectedTable();
 
             // Navigate to orders page
@@ -169,6 +208,8 @@ const CartPage = () => {
         }
     };
 
+    const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+
     if (isLoading) {
         return (
             <div className="cart-page">
@@ -185,169 +226,253 @@ const CartPage = () => {
     return (
         <div className="cart-page">
             <div className="container cart-container">
-                {/* Header */}
-                <div className="cart-header">
-                    <h1 className="page-title">🛒 Giỏ hàng của bạn</h1>
-                    {currentTable ? (
-                        <div className="table-info">
-                            <span>🪑 Bàn {currentTable.number}</span>
-                        </div>
-                    ) : (
-                        <div className="table-info" style={{ background: '#ffc107', color: '#000' }}>
-                            <span>⚠️ Chưa chọn bàn</span>
-                            <button
-                                onClick={() => navigate('/tables')}
-                                style={{ marginLeft: '1rem', padding: '0.5rem 1rem', cursor: 'pointer' }}
-                            >
-                                Chọn bàn
+                <div className="cart-hero glass-panel">
+                    <div className="cart-hero-copy">
+                        <span className="dashboard-eyebrow">Giỏ hàng</span>
+                        <h1>Giữ trọn bữa ăn hôm nay</h1>
+                        <p>
+                            Kiểm tra lại các món đã chọn, thêm ghi chú cho bếp và hoàn tất đơn đặt món chỉ với một lượt chạm.
+                            Chúng tôi sẽ chuẩn bị mọi thứ trước khi bạn tới bàn.
+                        </p>
+                        <div className="hero-actions">
+                            <button className="btn-secondary" onClick={() => navigate('/menu')}>
+                                Tiếp tục chọn món
                             </button>
                         </div>
-                    )}
+                    </div>
+                    <div className="cart-hero-status">
+                        <div className={`table-chip ${currentTable ? 'ready' : 'warning'}`}>
+                            <div>
+                                <p className="chip-label">Trạng thái bàn</p>
+                                <strong>
+                                    {currentTable
+                                        ? `Bàn ${currentTable.table_number || currentTable.number}`
+                                        : 'Chưa chọn bàn'}
+                                </strong>
+                                <span className="chip-subtext">
+                                    {currentTable?.location || 'Vui lòng chọn bàn để đặt món'}
+                                </span>
+                            </div>
+                            {!currentTable && (
+                                <button className="chip-action" onClick={() => navigate('/tables')}>
+                                    Chọn bàn
+                                </button>
+                            )}
+                        </div>
+                        {currentTable && (
+                            <div className={`reservation-chip-card ${selectedReservation ? 'active' : 'warning'}`}>
+                                <div>
+                                    <p className="chip-label">Khung giờ giữ bàn</p>
+                                    {selectedReservation ? (
+                                        <strong>
+                                            {new Date(selectedReservation.start_time).toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                            {' - '}
+                                            {new Date(selectedReservation.end_time).toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </strong>
+                                    ) : (
+                                        <strong>Chưa giữ khung giờ</strong>
+                                    )}
+                                    <span className="chip-subtext">
+                                        {selectedReservation ? 'Bàn sẽ tự hủy nếu quá giờ đã giữ' : 'Hãy chọn khung giờ tại trang Bàn'}
+                                    </span>
+                                </div>
+                                {!selectedReservation ? (
+                                    <button className="chip-action" onClick={() => navigate('/tables')}>
+                                        Giữ bàn
+                                    </button>
+                                ) : (
+                                    <button className="chip-action" onClick={handleCancelTable}>
+                                        Hủy giữ & làm mới
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                        <div className="cart-hero-metrics">
+                            <div className="cart-metric">
+                                <span>Món đã chọn</span>
+                                <strong>{items.length}</strong>
+                            </div>
+                            <div className="cart-metric">
+                                <span>Tổng số lượng</span>
+                                <strong>{totalQuantity}</strong>
+                            </div>
+                            <div className="cart-metric">
+                                <span>Tổng tiền tạm tính</span>
+                                <strong>{formatPrice(getTotal())}</strong>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {items.length === 0 ? (
-                    <div className="empty-cart">
+                    <div className="empty-cart glass-panel">
                         <div className="empty-cart-icon">🛒</div>
-                        <h2>Giỏ hàng trống</h2>
-                        <p>Hãy thêm món ăn vào giỏ hàng để tiếp tục</p>
-                        <button
-                            className="btn-primary"
-                            onClick={() => navigate('/menu')}
-                        >
+                        <h2>Giỏ hàng của bạn đang trống</h2>
+                        <p>Khám phá thực đơn để thêm món ăn yêu thích và quay lại hoàn tất đơn hàng.</p>
+                        <button className="btn-primary" onClick={() => navigate('/menu')}>
                             Xem thực đơn
                         </button>
                     </div>
                 ) : (
-                    <div className="cart-content">
-                        {/* Cart Items */}
-                        <div className="cart-items">
-                            <div className="cart-items-header">
-                                <h2>Món đã chọn ({items.length})</h2>
-                                <button
-                                    className="btn-clear"
-                                    onClick={handleClearCart}
-                                >
+                    <div className="cart-grid">
+                        <section className="cart-items glass-panel">
+                            <div className="section-heading">
+                                <div>
+                                    <p className="section-eyebrow">Danh sách món</p>
+                                    <h2>Món đã chọn ({items.length})</h2>
+                                </div>
+                                <button className="ghost-link" onClick={handleClearCart}>
                                     Xóa tất cả
                                 </button>
                             </div>
 
-                            <div className="items-list">
+                            <div className="cart-items-list">
                                 {items.map((item) => {
                                     const product = item.product;
                                     const price = item.price_at_time || product?.price || 0;
 
                                     return (
-                                        <div key={item.id} className="cart-item">
-                                            <div className="item-image">
+                                        <div key={item.id} className="cart-item-card">
+                                            <div className="cart-item-thumb">
                                                 {product?.image_url ? (
                                                     <img src={product.image_url} alt={product.name} />
                                                 ) : (
                                                     <div className="no-image">🍽️</div>
                                                 )}
                                             </div>
+                                            <div className="cart-item-body">
+                                                <div className="cart-item-head">
+                                                    <div>
+                                                        <h3>{product?.name || 'Món ăn'}</h3>
+                                                        <span className="item-unit-price">{formatPrice(price)} / suất</span>
+                                                    </div>
+                                                    <button
+                                                        className="ghost-btn"
+                                                        onClick={() => handleRemoveItem(item.id)}
+                                                        disabled={isLoading}
+                                                        aria-label="Xóa món khỏi giỏ"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
 
-                                            <div className="item-info">
-                                                <h3 className="item-name">{product?.name || 'Món ăn'}</h3>
-                                                <p className="item-price">{formatPrice(price)}</p>
+                                                <div className="cart-item-meta">
+                                                    <div className="qty-control" aria-label="Điều chỉnh số lượng">
+                                                        <button
+                                                            className="qty-btn"
+                                                            onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                                            disabled={isLoading}
+                                                            aria-label="Giảm số lượng"
+                                                        >
+                                                            −
+                                                        </button>
+                                                        <span className="qty-value">{item.quantity}</span>
+                                                        <button
+                                                            className="qty-btn"
+                                                            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                                            disabled={isLoading}
+                                                            aria-label="Tăng số lượng"
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+                                                    <div className="item-total">
+                                                        <span>Tạm tính</span>
+                                                        <strong>{formatPrice(price * item.quantity)}</strong>
+                                                    </div>
+                                                </div>
                                             </div>
-
-                                            <div className="item-quantity">
-                                                <button
-                                                    className="qty-btn"
-                                                    onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                                    disabled={isLoading}
-                                                >
-                                                    −
-                                                </button>
-                                                <span className="qty-value">{item.quantity}</span>
-                                                <button
-                                                    className="qty-btn"
-                                                    onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                                    disabled={isLoading}
-                                                >
-                                                    +
-                                                </button>
-                                            </div>
-
-                                            <div className="item-total">
-                                                {formatPrice(price * item.quantity)}
-                                            </div>
-
-                                            <button
-                                                className="btn-remove"
-                                                onClick={() => handleRemoveItem(item.id)}
-                                                disabled={isLoading}
-                                            >
-                                                🗑️
-                                            </button>
                                         </div>
                                     );
                                 })}
                             </div>
-                        </div>
+                        </section>
 
-                        {/* Cart Summary */}
-                        <div className="cart-summary">
-                            <h2>Tóm tắt đơn hàng</h2>
-
-                            {currentTable ? (
-                                <div className="summary-item">
-                                    <span>Bàn số:</span>
-                                    <strong>Bàn {currentTable.number}</strong>
-                                </div>
-                            ) : (
-                                <div className="summary-item" style={{ color: '#ffc107' }}>
-                                    <span>⚠️ Chưa chọn bàn</span>
-                                    <button onClick={() => navigate('/tables')}>
-                                        Chọn bàn
-                                    </button>
-                                </div>
-                            )}
-
-                            <div className="summary-item">
-                                <span>Số lượng món:</span>
-                                <strong>{items.length} món</strong>
+                        <aside className="cart-summary glass-panel">
+                            <div className="summary-heading">
+                                <p className="section-eyebrow">Tổng kết</p>
+                                <h2>Tóm tắt đơn hàng</h2>
                             </div>
 
-                            <div className="summary-item">
-                                <span>Tổng số lượng:</span>
-                                <strong>{items.reduce((sum, item) => sum + item.quantity, 0)}</strong>
+                            <div className="summary-list">
+                                <div className="summary-item">
+                                    <span>Bàn ăn</span>
+                                    {currentTable ? (
+                                        <strong>
+                                            Bàn {currentTable.table_number || currentTable.number}
+                                        </strong>
+                                    ) : (
+                                        <button className="chip-action" onClick={() => navigate('/tables')}>
+                                            Chọn bàn
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="summary-item">
+                                    <span>Số lượng món</span>
+                                    <strong>{items.length} món</strong>
+                                </div>
+                                <div className="summary-item">
+                                    <span>Tổng suất</span>
+                                    <strong>{totalQuantity}</strong>
+                                </div>
                             </div>
 
                             <div className="summary-divider"></div>
 
                             <div className="summary-total">
-                                <span>Tổng cộng:</span>
+                                <span>Tổng cộng</span>
                                 <strong>{formatPrice(getTotal())}</strong>
                             </div>
 
                             <div className="notes-section">
-                                <label htmlFor="notes">Ghi chú:</label>
+                                <div className="notes-header">
+                                    <div>
+                                        <p className="notes-label">Ghi chú cho bếp</p>
+                                        <span className="notes-helper">
+                                            Thêm yêu cầu đặc biệt để bếp chuẩn bị chính xác.
+                                        </span>
+                                    </div>
+                                    <span className="notes-char-count">{notes.length}/200</span>
+                                </div>
                                 <textarea
                                     id="notes"
                                     rows="3"
-                                    placeholder="Thêm ghi chú cho đơn hàng..."
+                                    maxLength={200}
+                                    placeholder="Ví dụ: Ít cay, thêm chanh, giao món trước 11h30..."
                                     value={notes}
                                     onChange={(e) => setNotes(e.target.value)}
                                     className="notes-input"
                                 />
                             </div>
 
-                            <button
-                                className="btn-checkout"
-                                onClick={handleCheckout}
-                                disabled={isSubmitting || items.length === 0 || !currentTable}
-                            >
-                                {isSubmitting ? 'Đang xử lý...' : 'Đặt hàng'}
-                            </button>
+                            <div className="cart-actions">
+                                <button
+                                    className="btn-checkout"
+                                    onClick={handleCheckout}
+                                    disabled={isSubmitting || items.length === 0 || !currentTable}
+                                >
+                                    {isSubmitting ? 'Đang xử lý...' : 'Đặt hàng ngay'}
+                                </button>
 
-                            <button
-                                className="btn-continue"
-                                onClick={() => navigate('/menu')}
-                            >
-                                Tiếp tục chọn món
-                            </button>
-                        </div>
+                                <button className="btn-continue" onClick={() => navigate('/menu')}>
+                                    Tiếp tục chọn món
+                                </button>
+
+                                <button
+                                    className="btn-cancel-table"
+                                    onClick={handleCancelTable}
+                                    disabled={items.length === 0 && !currentTable}
+                                >
+                                    Hủy bàn & làm trống giỏ
+                                </button>
+                            </div>
+                        </aside>
                     </div>
                 )}
             </div>

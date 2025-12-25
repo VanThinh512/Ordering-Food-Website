@@ -183,34 +183,15 @@ const MenuPage = () => {
     const renderTableBanner = () => {
         if (!selectedTable) {
             return (
-                <div style={{
-                    background: '#fff3cd',
-                    border: '2px solid #ffc107',
-                    borderRadius: '12px',
-                    padding: '1rem 1.5rem',
-                    marginBottom: '1.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <span style={{ fontSize: '2rem' }}>⚠️</span>
-                        <span style={{ fontWeight: '600', color: '#856404' }}>
-                            Bạn chưa chọn bàn
-                        </span>
+                <div className="table-alert-banner warning glass-panel">
+                    <div className="banner-copy">
+                        <span className="banner-icon">⚠️</span>
+                        <div>
+                            <p className="banner-eyebrow">Chưa có bàn</p>
+                            <h3>Hãy chọn bàn trước khi đặt món</h3>
+                        </div>
                     </div>
-                    <button
-                        onClick={() => navigate('/tables')}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            background: '#ffc107',
-                            color: '#856404',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                        }}
-                    >
+                    <button className="btn-primary" onClick={() => navigate('/tables')}>
                         Chọn bàn ngay
                     </button>
                 </div>
@@ -218,40 +199,17 @@ const MenuPage = () => {
         }
 
         return (
-            <div style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                borderRadius: '12px',
-                padding: '1rem 1.5rem',
-                marginBottom: '1.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <span style={{ fontSize: '2rem' }}>🪑</span>
+            <div className="table-alert-banner success glass-panel">
+                <div className="banner-copy">
+                    <span className="banner-icon">🪑</span>
                     <div>
-                        <p style={{ margin: 0, fontSize: '0.875rem', opacity: 0.9 }}>
-                            Bàn đã chọn
-                        </p>
-                        <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>
-                            Bàn {selectedTable.number} - {selectedTable.location}
-                        </p>
+                        <p className="banner-eyebrow">Bàn đã chọn</p>
+                        <h3>
+                            Bàn {selectedTable.table_number || selectedTable.number} - {selectedTable.location}
+                        </h3>
                     </div>
                 </div>
-                <button
-                    onClick={() => navigate('/tables')}
-                    style={{
-                        padding: '0.75rem 1.5rem',
-                        background: 'rgba(255, 255, 255, 0.2)',
-                        color: 'white',
-                        border: '2px solid white',
-                        borderRadius: '8px',
-                        fontWeight: '600',
-                        cursor: 'pointer'
-                    }}
-                >
+                <button className="btn-secondary" onClick={() => navigate('/tables')}>
                     Đổi bàn
                 </button>
             </div>
@@ -267,8 +225,54 @@ const MenuPage = () => {
     return (
         <div className="menu-page">
             <div className="container menu-container">
-                {/* Table Selection Banner */}
-                {renderTableBanner()}
+                <div className="menu-layout-grid">
+                    <div className="menu-main-column">
+                        {renderTableBanner()}
+
+                        <section className="menu-hero glass-panel">
+                            <div className="menu-hero-copy">
+                                <p className="dashboard-eyebrow">Thực đơn hôm nay</p>
+                                <h1>Ăn ngon - no lâu - nạp năng lượng</h1>
+                                <p>
+                                    Từ món chính đến đồ uống, mọi món ăn đều được chuẩn bị tươi mới mỗi ngày. Chọn món, đặt bàn và
+                                    thưởng thức ngay tại căn-tin số hóa.
+                                </p>
+                                <div className="hero-actions">
+                                    <button className="btn-primary" onClick={() => setSelectedCategory('all')}>
+
+                                        Xem tất cả món
+                                    </button>
+                                    <button className="btn-secondary" onClick={() => navigate('/orders')}>
+
+                                        Đơn hàng của tôi
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                    <aside className="menu-side-panel">
+                        <div className="menu-hero-card glass-panel">
+                            <div className="hero-card-metric">
+                                <span>Đang mở bán </span>
+                                <strong>{products.length || allProducts.length} món</strong>
+                            </div>
+                            <div className="hero-card-status">
+                                <p>Hôm nay có {categories.length} nhóm món.</p>
+                                <p>
+                                    Bàn{' '}
+                                    {selectedTable
+                                        ? selectedTable.table_number || selectedTable.number
+                                        : 'chưa chọn'}
+                                    .
+                                </p>
+                            </div>
+                        </div>
+                        <div className="menu-stats-card glass-panel">
+                            <p>Đã thêm vào giỏ</p>
+                            <strong>{addingProductId ? 'Đang thêm...' : 'Sẵn sàng'}</strong>
+                        </div>
+                    </aside>
+                </div>
 
                 <div className="menu-header">
                     <span className="menu-kicker">Thực đơn hôm nay</span>
@@ -322,38 +326,40 @@ const MenuPage = () => {
                     </div>
                 </div>
 
-                {/* Hiển thị filter info */}
                 {(searchTerm || selectedCategory !== 'all') && (
-                    <div className="filter-info">
-                        <span className="filter-text">
+                    <div className="filter-info glass-panel">
+                        <div className="filter-text">
                             {searchTerm && (
-                                <>
-                                    Tìm kiếm: <strong>"{searchTerm}"</strong>
-                                    {selectedCategory !== 'all' && ' • '}
-                                </>
+                                <span className="filter-chip">
+                                    Từ khóa: <strong>"{searchTerm}"</strong>
+                                </span>
                             )}
                             {selectedCategory !== 'all' && (
-                                <>
-                                    Danh mục: <strong>
+                                <span className="filter-chip">
+                                    Danh mục:{' '}
+                                    <strong>
                                         {categories.find(c => c.id.toString() === selectedCategory)?.name}
                                     </strong>
-                                </>
+                                </span>
                             )}
-                        </span>
-                        <span className="result-count">
-                            {products.length} món ăn
-                        </span>
-                        <button
-                            className="clear-filters-btn"
-                            onClick={() => {
-                                setSearchTerm('');
-                                setSelectedCategory('all');
-                                searchParams.delete('category');
-                                setSearchParams(searchParams);
-                            }}
-                        >
-                            Xóa bộ lọc
-                        </button>
+                        </div>
+                        <div className="filter-meta">
+                            <span className="result-count">
+                                <strong>{products.length}</strong> món ăn
+                            </span>
+                            <button
+                                type="button"
+                                className="clear-filters-btn"
+                                onClick={() => {
+                                    setSearchTerm('');
+                                    setSelectedCategory('all');
+                                    searchParams.delete('category');
+                                    setSearchParams(searchParams);
+                                }}
+                            >
+                                Xóa bộ lọc
+                            </button>
+                        </div>
                     </div>
                 )}
 

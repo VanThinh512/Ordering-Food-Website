@@ -1,6 +1,7 @@
 """Order models."""
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
+from sqlalchemy import Column, Unicode
 from sqlmodel import SQLModel, Field, Relationship
 
 from app.utils.enums import OrderStatus, PaymentStatus
@@ -9,6 +10,7 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.models.table import Table
     from app.models.product import Product
+    from app.models.reservation import TableReservation
 
 
 class Order(SQLModel, table=True):
@@ -27,8 +29,16 @@ class Order(SQLModel, table=True):
     payment_status: PaymentStatus = Field(default=PaymentStatus.UNPAID)
     
     # Additional info
-    notes: Optional[str] = Field(default=None, max_length=1000)
-    delivery_type: Optional[str] = Field(default="pickup", max_length=50)  # "pickup", "dine-in", "delivery"
+    notes: Optional[str] = Field(
+        default=None,
+        sa_column=Column("notes", Unicode(1000), nullable=True),
+        max_length=1000
+    )
+    delivery_type: Optional[str] = Field(
+        default="pickup",
+        sa_column=Column("delivery_type", Unicode(50), nullable=True),
+        max_length=50
+    )  # "pickup", "dine-in", "delivery"
     
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
@@ -42,6 +52,7 @@ class Order(SQLModel, table=True):
         back_populates="order",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
+    reservation: Optional["TableReservation"] = Relationship(back_populates="order")
 
 
 class OrderItem(SQLModel, table=True):
@@ -59,7 +70,11 @@ class OrderItem(SQLModel, table=True):
     subtotal: float = Field(ge=0)  # quantity * price_at_time
     
     # Optional customization notes
-    notes: Optional[str] = Field(default=None, max_length=500)
+    notes: Optional[str] = Field(
+        default=None,
+        sa_column=Column("notes", Unicode(500), nullable=True),
+        max_length=500
+    )
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
