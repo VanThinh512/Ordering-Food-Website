@@ -1,113 +1,150 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import authService from '../services/Auth';
+import axios from 'axios';
 
-export const useAuthStore = create(
-    persist(
-        (set, get) => ({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
+const API_URL = 'http://localhost:8000/api/v1';
 
-            login: async (username, password) => {
-                set({ isLoading: true });
-                try {
-                    const data = await authService.login(username, password);
+export const useAuthStore = create((set) => ({
+    user: null,
+    token: localStorage.getItem('access_token'),
+    isAuthenticated: !!localStorage.getItem('access_token'),
 
-                    // Lưu token vào cả 2 key để tương thích
-                    localStorage.setItem('access_token', data.access_token);
-                    localStorage.setItem('token', data.access_token);
+    login: async (email, password) => {
+        try {
+            const formData = new URLSearchParams();
+            formData.append('username', email);
+            formData.append('password', password);
 
-                    const user = await authService.getCurrentUser();
+            const response = await axios.post(`${API_URL}/auth/login`, formData, {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+            });
 
-                    console.log('Login success - User data:', user);
-                    console.log('Token saved:', data.access_token.substring(0, 20) + '...');
+            const { access_token } = response.data;
+            localStorage.setItem('access_token', access_token);
 
-                    set({
-                        user,
-                        isAuthenticated: true,
-                        isLoading: false
-                    });
+            // Fetch user info
+            const userResponse = await axios.get(`${API_URL}/auth/me`, {
+                headers: {
+                    Authorization: `Bearer ${access_token}`,
+                },
+            });
 
-                    return { success: true };
-                } catch (error) {
-                    console.error('Login error:', error);
-                    set({ isLoading: false });
-                    return {
-                        success: false,
-                        error: error.response?.data?.detail || 'Đăng nhập thất bại'
-                    };
-                }
-            },
+            const userData = userResponse.data;
 
-            register: async (userData) => {
-                set({ isLoading: true });
-                try {
-                    await authService.register(userData);
-                    set({ isLoading: false });
-                    return { success: true };
-                } catch (error) {
-                    set({ isLoading: false });
-                    return {
-                        success: false,
-                        error: error.response?.data?.detail || 'Đăng ký thất bại'
-                    };
-                }
-            },
+            set({
+                user: userData,
+                token: access_token,
+                isAuthenticated: true,
+            });
 
-            logout: () => {
-                authService.logout();
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('token');
-                localStorage.removeItem('cart-storage');
-                localStorage.removeItem('table-storage');
-                set({ user: null, isAuthenticated: false });
-            },
+            return {
+                success: true,
+                user: userData  // Return user data để check role
+            };
+        } catch (error) {
+            console.error('Login error:', error);
 
-            // Thêm hàm checkAuth
-            checkAuth: async () => {
-                const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-
-                if (!token) {
-                    console.log('No token found');
-                    set({ user: null, isAuthenticated: false });
-                    return;
-                }
-
-                try {
-                    console.log('Checking auth with token:', token.substring(0, 20) + '...');
-
-                    const user = await authService.getCurrentUser();
-
-                    console.log('Auth check success:', user);
-
-                    // Đảm bảo token có ở cả 2 key
-                    localStorage.setItem('access_token', token);
-                    localStorage.setItem('token', token);
-
-                    set({
-                        user,
-                        isAuthenticated: true
-                    });
-                } catch (error) {
-                    console.error('Auth check failed:', error);
-                    localStorage.removeItem('access_token');
-                    localStorage.removeItem('token');
-                    set({ user: null, isAuthenticated: false });
-                }
-            },
-
-            // Giữ loadUser cho tương thích ngược
-            loadUser: async () => {
-                await get().checkAuth();
+            // Check if user is banned (400 status with "Inactive user")
+            if (error.response?.status === 400 &&
+                error.response?.data?.detail === 'Inactive user') {
+                return {
+                    success: false,
+                    error: 'Tài khoản của bạn đã bị khóa',
+                    errorData: {
+                        message: 'Tài khoản của bạn đã bị quản trị viên khóa',
+                        ban_reason: 'Vi phạm chính sách sử dụng hoặc hành vi không phù hợp',
+                        is_permanent: true
+                    }
+                };
             }
-        }),
-        {
-            name: 'auth-storage',
-            partialize: (state) => ({
-                user: state.user,
-                isAuthenticated: state.isAuthenticated
-            })
+
+            return {
+                success: false,
+                error: error.response?.data?.detail || 'Email hoặc mật khẩu không đúng',
+            };
         }
-    )
-);
+    },
+
+    register: async (userData) => {
+        try {
+            await axios.post(`${API_URL}/auth/register`, userData);
+            return { success: true };
+        } catch (error) {
+            console.error('Register error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.detail || 'Đăng ký thất bại',
+            };
+        }
+    },
+
+    logout: () => {
+        localStorage.removeItem('access_token');
+        set({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+        });
+    },
+
+    loadUser: async () => {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            set({ isAuthenticated: false, user: null });
+            return;
+        }
+
+        try {
+            const response = await axios.get(`${API_URL}/auth/me`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            set({
+                user: response.data,
+                token,
+                isAuthenticated: true,
+            });
+        } catch (error) {
+            console.error('Load user failed:', error);
+            localStorage.removeItem('access_token');
+            set({
+                user: null,
+                token: null,
+                isAuthenticated: false,
+            });
+        }
+    },
+
+    checkAuth: async () => {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            set({ isAuthenticated: false, user: null });
+            return;
+        }
+
+        try {
+            const response = await axios.get(`${API_URL}/auth/me`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            set({
+                user: response.data,
+                token,
+                isAuthenticated: true,
+            });
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            localStorage.removeItem('access_token');
+            set({
+                user: null,
+                token: null,
+                isAuthenticated: false,
+            });
+        }
+    },
+}));

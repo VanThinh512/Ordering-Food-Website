@@ -40,8 +40,13 @@ export const useCartStore = create(
 
                     console.log('📦 Fetching cart from server...');
 
-                    const response = await axios.get(`${API_URL}/cart/`, {
-                        headers: { Authorization: `Bearer ${token}` }
+                    // ⚠️ THAY ĐỔI: /cart/ → /carts/
+                    const response = await axios.get(`${API_URL}/carts/`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
                     });
 
                     console.log('📦 Raw cart data:', response.data);
@@ -50,13 +55,11 @@ export const useCartStore = create(
                     const cartItems = response.data.items || [];
                     const enrichedItems = await Promise.all(
                         cartItems.map(async (item) => {
-                            // Nếu đã có product details thì giữ nguyên
                             if (item.product && item.product.name) {
                                 console.log('✅ Item already has product details:', item);
                                 return item;
                             }
 
-                            // Nếu không có, fetch từ API
                             console.log('🔄 Fetching product details for:', item.product_id);
                             const productDetails = await get().fetchProductDetails(item.product_id);
 
@@ -116,8 +119,9 @@ export const useCartStore = create(
                         product_name: product.name
                     });
 
+                    // ⚠️ THAY ĐỔI: /cart/items → /carts/items
                     const response = await axios.post(
-                        `${API_URL}/cart/items`,
+                        `${API_URL}/carts/items`,
                         {
                             product_id: product.id,
                             quantity: product.quantity || 1
@@ -125,7 +129,8 @@ export const useCartStore = create(
                         {
                             headers: {
                                 'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
                             }
                         }
                     );
@@ -144,7 +149,7 @@ export const useCartStore = create(
                         set({ items: updatedItems, isLoading: false });
                     } else {
                         const newItem = {
-                            id: response.data.cart_item?.id,
+                            id: response.data.cart_item?.id || response.data.id,
                             product_id: product.id,
                             quantity: product.quantity || 1,
                             price_at_time: product.price,
@@ -209,13 +214,15 @@ export const useCartStore = create(
 
                     console.log('🔄 Updating quantity:', { itemId, quantity });
 
+                    // ⚠️ THAY ĐỔI: /cart/items → /carts/items
                     await axios.put(
-                        `${API_URL}/cart/items/${itemId}`,
+                        `${API_URL}/carts/items/${itemId}`,
                         { quantity },
                         {
                             headers: {
                                 'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
                             }
                         }
                     );
@@ -256,8 +263,12 @@ export const useCartStore = create(
 
                     console.log('🗑️ Removing item:', itemId);
 
-                    await axios.delete(`${API_URL}/cart/items/${itemId}`, {
-                        headers: { Authorization: `Bearer ${token}` }
+                    // ⚠️ THAY ĐỔI: /cart/items → /carts/items
+                    await axios.delete(`${API_URL}/carts/items/${itemId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
                     });
 
                     const { items } = get();
@@ -290,8 +301,12 @@ export const useCartStore = create(
 
                     console.log('🗑️ Clearing cart...');
 
-                    await axios.delete(`${API_URL}/cart/`, {
-                        headers: { Authorization: `Bearer ${token}` }
+                    // ⚠️ THAY ĐỔI: /cart/ → /carts/
+                    await axios.delete(`${API_URL}/carts/`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
                     });
 
                     set({
