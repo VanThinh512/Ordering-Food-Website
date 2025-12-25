@@ -110,7 +110,7 @@ const LoginPage = () => {
 
                         <button
                             type="submit"
-                            className="btn-submit"
+                            className="btn-submit btn-login-cta"
                             disabled={loading}
                         >
                             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}

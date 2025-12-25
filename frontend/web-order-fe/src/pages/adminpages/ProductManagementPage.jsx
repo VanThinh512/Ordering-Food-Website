@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import productService from '../../services/Product';
@@ -67,6 +68,49 @@ const ProductManagementPage = () => {
         return matchSearch && matchCategory;
     });
 
+    const productStats = useMemo(() => {
+        const available = products.filter((p) => p.is_available).length;
+        const unavailable = products.length - available;
+        return [
+            {
+                label: 'Tổng món ăn',
+                value: products.length,
+                meta: '+5 trong tuần qua',
+                icon: '🍽️',
+                accent: 'accent-cyan',
+            },
+            {
+                label: 'Đang bán',
+                value: available,
+                meta: 'Hiện hữ trên menu',
+                icon: '✅',
+                accent: 'accent-green',
+            },
+            {
+                label: 'Tạm dừng',
+                value: unavailable,
+                meta: 'Chờ bổ sung',
+                icon: '⏸️',
+                accent: 'accent-orange',
+            },
+            {
+                label: 'Danh mục',
+                value: categories.length,
+                meta: 'Phân loại món',
+                icon: '🗂️',
+                accent: 'accent-purple',
+            },
+        ];
+    }, [products, categories]);
+
+    const categoryCountMap = useMemo(() => {
+        return products.reduce((acc, product) => {
+            const key = product.category_id;
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+        }, {});
+    }, [products]);
+
     const openAddModal = () => {
         setModalMode('add');
         setFormData({
@@ -99,6 +143,7 @@ const ProductManagementPage = () => {
 
     const closeModal = () => {
         setShowModal(false);
+
         setSelectedProduct(null);
         setFormData({
             name: '',
@@ -262,61 +307,68 @@ const ProductManagementPage = () => {
         <div className="product-management-page">
             <div className="container">
                 {/* Header */}
-                <div className="page-header">
-                    <div className="header-content">
-                        <h1 className="page-title">
-                            <span className="title-icon">🍽️</span>
-                            Quản lý món ăn
-                        </h1>
-                        <p className="page-subtitle">
-                            Quản lý thực đơn và cập nhật món ăn
+                <div className="product-admin-hero">
+                    <div className="product-hero-copy">
+                        <p className="dashboard-eyebrow">Điều phối thực đơn</p>
+                        <h1>Quản lý món ăn theo phong cách bếp trưởng</h1>
+                        <p>
+                            Theo dõi tình trạng món ăn, tinh chỉnh giá và đồng bộ danh mục chỉ trong
+                            một bảng điều khiển. Mọi cập nhật sẽ phản ánh ngay cho quầy và ứng dụng học sinh.
                         </p>
+                        <div className="hero-actions">
+                            <button className="btn-primary" onClick={openAddModal}>
+                                + Thêm món mới
+                            </button>
+                            <button className="btn-secondary" onClick={loadData}>
+                                Làm mới dữ liệu
+                            </button>
+                        </div>
                     </div>
-                    <button className="btn-add-product" onClick={openAddModal}>
-                        <span className="btn-icon">+</span>
-                        Thêm món mới
-                    </button>
+                    <div className="product-hero-card">
+                        <div>
+                            <p className="card-label">Tỉ lệ sẵn sàng</p>
+                            <h2>
+                                {products.length
+                                    ? Math.round(
+                                          (products.filter((p) => p.is_available).length / products.length) * 100
+                                      )
+                                    : 0}
+                                %
+                            </h2>
+                            <p className="card-meta">Món đang phục vụ</p>
+                        </div>
+                        <div className="hero-highlight-grid">
+                            <div>
+                                <span>Best-seller</span>
+                                <strong>
+                                    {products[0]?.name || 'Chưa có dữ liệu'}
+                                </strong>
+                            </div>
+                            <div>
+                                <span>Cập nhật gần nhất</span>
+                                <strong>{new Date().toLocaleDateString('vi-VN')}</strong>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
-                <div className="stats-grid">
-                    <div className="stat-card">
-                        <div className="stat-icon">📊</div>
-                        <div className="stat-content">
-                            <span className="stat-label">Tổng món ăn</span>
-                            <strong className="stat-value">{products.length}</strong>
+                <div className="product-stats-grid">
+                    {productStats.map((stat) => (
+                        <div key={stat.label} className={`product-stat-card ${stat.accent}`}>
+                            <div className="stat-icon">{stat.icon}</div>
+                            <div>
+                                <p>{stat.label}</p>
+                                <h3>{stat.value}</h3>
+                                <span>{stat.meta}</span>
+                            </div>
                         </div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-icon">✅</div>
-                        <div className="stat-content">
-                            <span className="stat-label">Đang bán</span>
-                            <strong className="stat-value">
-                                {products.filter(p => p.is_available).length}
-                            </strong>
-                        </div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-icon">❌</div>
-                        <div className="stat-content">
-                            <span className="stat-label">Hết hàng</span>
-                            <strong className="stat-value">
-                                {products.filter(p => !p.is_available).length}
-                            </strong>
-                        </div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-icon">📂</div>
-                        <div className="stat-content">
-                            <span className="stat-label">Danh mục</span>
-                            <strong className="stat-value">{categories.length}</strong>
-                        </div>
-                    </div>
+                    ))}
                 </div>
 
                 {/* Filters */}
-                <div className="filters-section">
-                    <div className="search-box">
+                <div className="product-filters-panel">
+                    <div className="search-box elevated">
                         <span className="search-icon">🔍</span>
                         <input
                             type="text"
@@ -325,14 +377,19 @@ const ProductManagementPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="search-input"
                         />
+                        {searchTerm && (
+                            <button className="filter-clear" onClick={() => setSearchTerm('')}>
+                                ×
+                            </button>
+                        )}
                     </div>
 
-                    <div className="category-filters">
+                    <div className="category-filters chip-group">
                         <button
                             className={`filter-btn ${selectedCategory === 'all' ? 'active' : ''}`}
                             onClick={() => setSelectedCategory('all')}
                         >
-                            Tất cả
+                            Tất cả <span className="category-count">{products.length}</span>
                         </button>
                         {categories.map(category => (
                             <button
@@ -341,6 +398,9 @@ const ProductManagementPage = () => {
                                 onClick={() => setSelectedCategory(category.id.toString())}
                             >
                                 {category.name}
+                                <span className="category-count">
+                                    {categoryCountMap[category.id] || 0}
+                                </span>
                             </button>
                         ))}
                     </div>
@@ -357,11 +417,12 @@ const ProductManagementPage = () => {
                         </button>
                     </div>
                 ) : (
-                    <div className="products-table-container">
-                        <table className="products-table">
+                    <div className="products-table-container glass-panel">
+                        <table className="products-table fancy-table">
                             <thead>
                                 <tr>
                                     <th>Hình ảnh</th>
+
                                     <th>Tên món</th>
                                     <th>Danh mục</th>
                                     <th>Giá</th>
@@ -379,6 +440,7 @@ const ProductManagementPage = () => {
                                                     {product.image_url ? (
                                                         <img
                                                             src={product.image_url}
+
                                                             alt={product.name}
                                                             className="product-thumbnail"
                                                             onError={(e) => {
@@ -400,6 +462,7 @@ const ProductManagementPage = () => {
                                                     )}
                                                 </div>
                                             </td>
+
                                             <td>
                                                 <span className="category-badge">
                                                     {category?.name || 'N/A'}
@@ -431,6 +494,7 @@ const ProductManagementPage = () => {
                                             </td>
                                             <td>
                                                 <div className="action-buttons">
+
                                                     <button
                                                         className="btn-action btn-edit"
                                                         onClick={() => openEditModal(product)}
@@ -457,119 +521,154 @@ const ProductManagementPage = () => {
 
                 {/* Modal */}
                 {showModal && (
-                    <div className="modal-overlay" onClick={closeModal}>
-                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                            <div className="modal-header">
-                                <h2 className="modal-title">
-                                    {modalMode === 'add' ? '➕ Thêm món mới' : '✏️ Chỉnh sửa món ăn'}
-                                </h2>
-                                <button className="modal-close" onClick={closeModal}>✕</button>
+                    <div
+                        className="modal-overlay product-modal-overlay"
+                        onClick={closeModal}
+                    >
+                        <div className="modal-content product-modal" onClick={(e) => e.stopPropagation()}>
+                            <div className="product-modal-header">
+                                <div>
+                                    <p className="dashboard-eyebrow">
+                                        {modalMode === 'add' ? 'Thêm món mới' : 'Chỉnh sửa món ăn'}
+                                    </p>
+                                    <h2>{modalMode === 'add' ? 'Đưa món mới lên quầy' : selectedProduct?.name}</h2>
+                                    <span>Điền thông tin để đồng bộ ngay tới thực đơn học sinh.</span>
+                                </div>
+                                <button className="btn-close-circle" onClick={closeModal}>
+                                    ×
+                                </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="modal-form">
-                                <div className="form-group">
-                                    <label htmlFor="name">
-                                        Tên món ăn <span className="required">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="name"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={handleInputChange}
-                                        className={formErrors.name ? 'error' : ''}
-                                        placeholder="Nhập tên món ăn"
-                                    />
-                                    {formErrors.name && <span className="error-message">{formErrors.name}</span>}
-                                </div>
+                            <form onSubmit={handleSubmit} className="product-modal-form">
+                                <div className="product-modal-body">
+                                    <div className="product-modal-fields">
+                                        <div className="product-field-grid">
+                                            <div className="form-group span-2">
+                                                <label htmlFor="name">
+                                                    Tên món ăn <span className="required">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    id="name"
+                                                    name="name"
+                                                    value={formData.name}
+                                                    onChange={handleInputChange}
+                                                    className={formErrors.name ? 'error' : ''}
+                                                    placeholder="Nhập tên món ăn"
+                                                />
+                                                {formErrors.name && <span className="error-message">{formErrors.name}</span>}
+                                            </div>
 
-                                <div className="form-group">
-                                    <label htmlFor="description">Mô tả</label>
-                                    <textarea
-                                        id="description"
-                                        name="description"
-                                        value={formData.description}
-                                        onChange={handleInputChange}
-                                        rows="3"
-                                        placeholder="Nhập mô tả món ăn"
-                                    />
-                                </div>
+                                            <div className="form-group span-2">
+                                                <label htmlFor="description">Mô tả</label>
+                                                <textarea
+                                                    id="description"
+                                                    name="description"
+                                                    value={formData.description}
+                                                    onChange={handleInputChange}
+                                                    rows="3"
+                                                    placeholder="Nhập mô tả món ăn"
+                                                />
+                                            </div>
 
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label htmlFor="price">
-                                            Giá <span className="required">*</span>
-                                        </label>
-                                        <input
-                                            type="number"
-                                            id="price"
-                                            name="price"
-                                            value={formData.price}
-                                            onChange={handleInputChange}
-                                            className={formErrors.price ? 'error' : ''}
-                                            placeholder="0"
-                                            min="0"
-                                            step="1000"
-                                        />
-                                        {formErrors.price && <span className="error-message">{formErrors.price}</span>}
-                                    </div>
+                                            <div className="form-group">
+                                                <label htmlFor="price">
+                                                    Giá <span className="required">*</span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    id="price"
+                                                    name="price"
+                                                    value={formData.price}
+                                                    onChange={handleInputChange}
+                                                    className={formErrors.price ? 'error' : ''}
+                                                    placeholder="0"
+                                                    min="0"
+                                                    step="1000"
+                                                />
+                                                {formErrors.price && <span className="error-message">{formErrors.price}</span>}
+                                            </div>
 
-                                    <div className="form-group">
-                                        <label htmlFor="category_id">
-                                            Danh mục <span className="required">*</span>
-                                        </label>
-                                        <select
-                                            id="category_id"
-                                            name="category_id"
-                                            value={formData.category_id}
-                                            onChange={handleInputChange}
-                                            className={formErrors.category_id ? 'error' : ''}
-                                        >
-                                            <option value="">Chọn danh mục</option>
-                                            {categories.map(category => (
-                                                <option key={category.id} value={category.id}>
-                                                    {category.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {formErrors.category_id && <span className="error-message">{formErrors.category_id}</span>}
-                                    </div>
-                                </div>
+                                            <div className="form-group">
+                                                <label htmlFor="category_id">
+                                                    Danh mục <span className="required">*</span>
+                                                </label>
+                                                <select
+                                                    id="category_id"
+                                                    name="category_id"
+                                                    value={formData.category_id}
+                                                    onChange={handleInputChange}
+                                                    className={formErrors.category_id ? 'error' : ''}
+                                                >
+                                                    <option value="">Chọn danh mục</option>
+                                                    {categories.map(category => (
+                                                        <option key={category.id} value={category.id}>
+                                                            {category.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {formErrors.category_id && <span className="error-message">{formErrors.category_id}</span>}
+                                            </div>
 
-                                <div className="form-group">
-                                    <label htmlFor="image_url">URL hình ảnh</label>
-                                    <input
-                                        type="url"
-                                        id="image_url"
-                                        name="image_url"
-                                        value={formData.image_url}
-                                        onChange={handleInputChange}
-                                        placeholder="https://example.com/image.jpg"
-                                    />
-                                    {formData.image_url && (
-                                        <div className="image-preview">
-                                            <img src={formData.image_url} alt="Preview" onError={(e) => e.target.style.display = 'none'} />
+                                            <div className="form-group span-2">
+                                                <label htmlFor="image_url">URL hình ảnh</label>
+                                                <input
+                                                    type="url"
+                                                    id="image_url"
+                                                    name="image_url"
+                                                    value={formData.image_url}
+                                                    onChange={handleInputChange}
+                                                    placeholder="https://example.com/image.jpg"
+                                                />
+                                            </div>
+
+                                            <div className="form-group span-2 availability-toggle">
+                                                <label className="checkbox-label">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="is_available"
+                                                        checked={formData.is_available}
+                                                        onChange={handleInputChange}
+                                                    />
+                                                    <span>Món ăn đang có sẵn để bán</span>
+                                                </label>
+                                            </div>
                                         </div>
-                                    )}
+                                    </div>
+                                    <div className="product-preview-card">
+                                        <p className="preview-label">Preview</p>
+                                        <div className="preview-image">
+                                            {formData.image_url ? (
+                                                <img
+                                                    src={formData.image_url}
+                                                    alt="Preview"
+                                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                                                />
+                                            ) : (
+                                                <span>🍱</span>
+                                            )}
+                                        </div>
+                                        <h4>{formData.name || 'Tên món ăn'}</h4>
+                                        <p>{formData.description || 'Mô tả món ăn sẽ hiển thị ở đây.'}</p>
+                                        <div className="preview-meta">
+                                            <span>{formData.price ? `${Number(formData.price).toLocaleString('vi-VN')}đ` : '0đ'}</span>
+                                            <span>
+                                                {formData.category_id
+                                                    ? categories.find((c) => c.id === parseInt(formData.category_id))?.name
+                                                    : 'Chưa có danh mục'}
+                                            </span>
+                                        </div>
+                                        <div className={`preview-status ${formData.is_available ? 'available' : 'unavailable'}`}>
+                                            {formData.is_available ? 'Đang bán' : 'Tạm dừng'}
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div className="form-group">
-                                    <label className="checkbox-label">
-                                        <input
-                                            type="checkbox"
-                                            name="is_available"
-                                            checked={formData.is_available}
-                                            onChange={handleInputChange}
-                                        />
-                                        <span>Món ăn đang có sẵn để bán</span>
-                                    </label>
-                                </div>
-
-                                <div className="modal-footer">
-                                    <button type="button" className="btn-cancel" onClick={closeModal}>
+                                <div className="product-modal-footer">
+                                    <button type="button" className="btn-secondary" onClick={closeModal}>
                                         Hủy
                                     </button>
-                                    <button type="submit" className="btn-submit" disabled={submitting}>
+                                    <button type="submit" className="btn-primary" disabled={submitting}>
                                         {submitting ? 'Đang xử lý...' : modalMode === 'add' ? 'Thêm món' : 'Cập nhật'}
                                     </button>
                                 </div>
