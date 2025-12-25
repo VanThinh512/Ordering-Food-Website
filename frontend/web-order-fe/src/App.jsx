@@ -17,6 +17,7 @@ import TableManagementPage from './pages/adminpages/TableManagementPage'
 import ProductManagementPage from './pages/adminpages/ProductManagementPage'
 import CategoryManagementPage from './pages/adminpages/CategoryManagementPage'
 import OrderManagementPage from './pages/adminpages/OrderManagementPage'
+import UserManagementPage from './pages/adminpages/UserManagementPage'
 import DashBoard from './pages/adminpages/DashBoard'
 import './App.css'
 import './style.css'
@@ -114,6 +115,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <OrderManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <UserManagementPage />
               </ProtectedRoute>
             }
           />

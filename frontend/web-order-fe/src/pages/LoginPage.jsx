@@ -10,6 +10,7 @@ const LoginPage = () => {
         password: '',
     });
     const [error, setError] = useState('');
+    const [banInfo, setBanInfo] = useState(null);
     const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
@@ -18,21 +19,40 @@ const LoginPage = () => {
             [e.target.name]: e.target.value,
         });
         setError('');
+        setBanInfo(null);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
+        setBanInfo(null);
 
         const result = await login(formData.username, formData.password);
 
         setLoading(false);
 
         if (result.success) {
-            navigate('/menu');
+            // Check user role and redirect accordingly
+            if (result.user?.role === 'admin') {
+                navigate('/admin/dashboard');
+            } else {
+                navigate('/menu');
+            }
         } else {
-            setError(result.error || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+            // Check if error is related to banned account
+            if (result.errorData && result.errorData.message) {
+                setBanInfo({
+                    message: result.errorData.message,
+                    reason: result.errorData.ban_reason,
+                    isPermanent: result.errorData.is_permanent,
+                    bannedUntil: result.errorData.banned_until,
+                    remainingDays: result.errorData.remaining_days,
+                    remainingHours: result.errorData.remaining_hours
+                });
+            } else {
+                setError(result.error || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+            }
         }
     };
 
@@ -80,6 +100,51 @@ const LoginPage = () => {
                     </div>
 
                     {error && <div className="error-message">{error}</div>}
+
+                    {/* Ban Info Message */}
+                    {banInfo && (
+                        <div className="ban-message">
+                            <div className="ban-header">
+                                <span className="ban-icon">🚫</span>
+                                <h3>Tài khoản bị khóa</h3>
+                            </div>
+                            <div className="ban-content">
+                                <p className="ban-main-message">{banInfo.message}</p>
+
+                                {banInfo.reason && (
+                                    <div className="ban-reason">
+                                        <strong>Lý do:</strong>
+                                        <p>{banInfo.reason}</p>
+                                    </div>
+                                )}
+
+                                {!banInfo.isPermanent && banInfo.remainingDays !== undefined && (
+                                    <div className="ban-duration">
+                                        <div className="ban-time-info">
+                                            <span className="time-badge">
+                                                ⏱️ Còn lại: {banInfo.remainingDays > 0
+                                                    ? `${banInfo.remainingDays} ngày ${Math.round(banInfo.remainingHours % 24)} giờ`
+                                                    : `${Math.round(banInfo.remainingHours)} giờ`
+                                                }
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {banInfo.isPermanent && (
+                                    <div className="ban-permanent">
+                                        <span className="permanent-badge">⚠️ Khóa vĩnh viễn</span>
+                                    </div>
+                                )}
+
+                                <div className="ban-contact">
+                                    <p>
+                                        💬 Nếu bạn cho rằng đây là nhầm lẫn, vui lòng liên hệ với quản trị viên để được hỗ trợ.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <form onSubmit={handleSubmit} className="auth-form">
                         <div className="form-group">
