@@ -169,6 +169,8 @@ const CartPage = () => {
         }
     };
 
+    const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+
     if (isLoading) {
         return (
             <div className="cart-page">
@@ -185,174 +187,185 @@ const CartPage = () => {
     return (
         <div className="cart-page">
             <div className="container cart-container">
-                {/* Header */}
-                <div className="cart-header">
-                    <h1 className="page-title">🛒 Giỏ hàng của bạn</h1>
-                    {currentTable ? (
-                        <div className="table-info">
-                            <span>🪑 Bàn {currentTable.number}</span>
-                        </div>
-                    ) : (
-                        <div className="table-info" style={{ background: '#ffc107', color: '#000' }}>
-                            <span>⚠️ Chưa chọn bàn</span>
-                            <button
-                                onClick={() => navigate('/tables')}
-                                style={{ marginLeft: '1rem', padding: '0.5rem 1rem', cursor: 'pointer' }}
-                            >
-                                Chọn bàn
+                <div className="cart-hero glass-panel">
+                    <div className="cart-hero-copy">
+                        <span className="dashboard-eyebrow">Giỏ hàng</span>
+                        <h1>Giữ trọn bữa ăn hôm nay</h1>
+                        <p>
+                            Kiểm tra lại các món đã chọn, thêm ghi chú cho bếp và hoàn tất đơn đặt món chỉ với một lượt chạm.
+                            Chúng tôi sẽ chuẩn bị mọi thứ trước khi bạn tới bàn.
+                        </p>
+                        <div className="hero-actions">
+                            <button className="btn-secondary" onClick={() => navigate('/menu')}>
+                                Tiếp tục chọn món
                             </button>
                         </div>
-                    )}
+                    </div>
+                    <div className="cart-hero-status">
+                        <div className={`table-chip ${currentTable ? 'ready' : 'warning'}`}>
+                            <div>
+                                <p className="chip-label">Trạng thái bàn</p>
+                                <strong>
+                                    {currentTable ? `Bàn ${currentTable.number}` : 'Chưa chọn bàn'}
+                                </strong>
+                                <span className="chip-subtext">
+                                    {currentTable?.location || 'Vui lòng chọn bàn để đặt món'}
+                                </span>
+                            </div>
+                            {!currentTable && (
+                                <button className="chip-action" onClick={() => navigate('/tables')}>
+                                    Chọn bàn
+                                </button>
+                            )}
+                        </div>
+                        <div className="cart-hero-metrics">
+                            <div className="cart-metric">
+                                <span>Món đã chọn</span>
+                                <strong>{items.length}</strong>
+                            </div>
+                            <div className="cart-metric">
+                                <span>Tổng số lượng</span>
+                                <strong>{totalQuantity}</strong>
+                            </div>
+                            <div className="cart-metric">
+                                <span>Tổng tiền tạm tính</span>
+                                <strong>{formatPrice(getTotal())}</strong>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {items.length === 0 ? (
-                    <div className="empty-cart">
+                    <div className="empty-cart glass-panel">
                         <div className="empty-cart-icon">🛒</div>
-                        <h2>Giỏ hàng trống</h2>
-                        <p>Hãy thêm món ăn vào giỏ hàng để tiếp tục</p>
-                        <button
-                            className="btn-primary"
-                            onClick={() => navigate('/menu')}
-                        >
+                        <h2>Giỏ hàng của bạn đang trống</h2>
+                        <p>Khám phá thực đơn để thêm món ăn yêu thích và quay lại hoàn tất đơn hàng.</p>
+                        <button className="btn-primary" onClick={() => navigate('/menu')}>
                             Xem thực đơn
                         </button>
                     </div>
                 ) : (
-                    <div className="cart-content">
-                        {/* Cart Items */}
-                        <div className="cart-items">
-                            <div className="cart-items-header">
-                                <h2>Món đã chọn ({items.length})</h2>
-                                <button
-                                    className="btn-clear"
-                                    onClick={handleClearCart}
-                                >
+                    <div className="cart-grid">
+                        <section className="cart-items glass-panel">
+                            <div className="section-heading">
+                                <div>
+                                    <p className="section-eyebrow">Danh sách món</p>
+                                    <h2>Món đã chọn ({items.length})</h2>
+                                </div>
+                                <button className="ghost-link" onClick={handleClearCart}>
                                     Xóa tất cả
                                 </button>
                             </div>
 
-                            <div className="items-list">
+                            <div className="cart-items-list">
                                 {items.map((item) => {
                                     const product = item.product;
                                     const price = item.price_at_time || product?.price || 0;
 
                                     return (
-                                        <div key={item.id} className="cart-item">
-                                            <div className="item-image">
+                                        <div key={item.id} className="cart-item-card">
+                                            <div className="cart-item-thumb">
                                                 {product?.image_url ? (
                                                     <img src={product.image_url} alt={product.name} />
                                                 ) : (
                                                     <div className="no-image">🍽️</div>
                                                 )}
                                             </div>
+                                            <div className="cart-item-body">
+                                                <div className="cart-item-head">
+                                                    <div>
+                                                        <h3>{product?.name || 'Món ăn'}</h3>
+                                                        <span className="item-unit-price">{formatPrice(price)} / suất</span>
+                                                    </div>
+                                                    <button
+                                                        className="ghost-btn"
+                                                        onClick={() => handleRemoveItem(item.id)}
+                                                        disabled={isLoading}
+                                                        aria-label="Xóa món khỏi giỏ"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
 
-                                            <div className="item-info">
-                                                <h3 className="item-name">{product?.name || 'Món ăn'}</h3>
-                                                <p className="item-price">{formatPrice(price)}</p>
+                                                <div className="cart-item-meta">
+                                                    <div className="qty-control" aria-label="Điều chỉnh số lượng">
+                                                        <button
+                                                            className="qty-btn"
+                                                            onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                                            disabled={isLoading}
+                                                            aria-label="Giảm số lượng"
+                                                        >
+                                                            −
+                                                        </button>
+                                                        <span className="qty-value">{item.quantity}</span>
+                                                        <button
+                                                            className="qty-btn"
+                                                            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                                            disabled={isLoading}
+                                                            aria-label="Tăng số lượng"
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+                                                    <div className="item-total">
+                                                        <span>Tạm tính</span>
+                                                        <strong>{formatPrice(price * item.quantity)}</strong>
+                                                    </div>
+                                                </div>
                                             </div>
-
-                                            <div className="item-quantity">
-                                                <button
-                                                    className="qty-btn"
-                                                    onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                                    disabled={isLoading}
-                                                >
-                                                    −
-                                                </button>
-                                                <span className="qty-value">{item.quantity}</span>
-                                                <button
-                                                    className="qty-btn"
-                                                    onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                                    disabled={isLoading}
-                                                >
-                                                    +
-                                                </button>
-                                            </div>
-
-                                            <div className="item-total">
-                                                {formatPrice(price * item.quantity)}
-                                            </div>
-
-                                            <button
-                                                className="btn-remove"
-                                                onClick={() => handleRemoveItem(item.id)}
-                                                disabled={isLoading}
-                                            >
-                                                🗑️
-                                            </button>
                                         </div>
                                     );
                                 })}
                             </div>
-                        </div>
+                        </section>
 
-                        {/* Cart Summary */}
-                        <div className="cart-summary">
-                            <h2>Tóm tắt đơn hàng</h2>
-
-                            {currentTable ? (
-                                <div className="summary-item">
-                                    <span>Bàn số:</span>
-                                    <strong>Bàn {currentTable.number}</strong>
-                                </div>
-                            ) : (
-                                <div className="summary-item" style={{ color: '#ffc107' }}>
-                                    <span>⚠️ Chưa chọn bàn</span>
-                                    <button onClick={() => navigate('/tables')}>
-                                        Chọn bàn
-                                    </button>
-                                </div>
-                            )}
-
-                            <div className="summary-item">
-                                <span>Số lượng món:</span>
-                                <strong>{items.length} món</strong>
+                        <aside className="cart-summary glass-panel">
+                            <div className="summary-heading">
+                                <p className="section-eyebrow">Tổng kết</p>
+                                <h2>Tóm tắt đơn hàng</h2>
                             </div>
 
-                            <div className="summary-item">
-                                <span>Tổng số lượng:</span>
-                                <strong>{items.reduce((sum, item) => sum + item.quantity, 0)}</strong>
+                            <div className="summary-list">
+                                <div className="summary-item">
+                                    <span>Bàn ăn</span>
+                                    {currentTable ? (
+                                        <strong>Bàn {currentTable.number}</strong>
+                                    ) : (
+                                        <button className="chip-action" onClick={() => navigate('/tables')}>
+                                            Chọn bàn
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="summary-item">
+                                    <span>Số lượng món</span>
+                                    <strong>{items.length} món</strong>
+                                </div>
+                                <div className="summary-item">
+                                    <span>Tổng suất</span>
+                                    <strong>{totalQuantity}</strong>
+                                </div>
                             </div>
 
                             <div className="summary-divider"></div>
-
-                            <div className="summary-total">
-                                <span>Tổng cộng:</span>
-                                <strong>{formatPrice(getTotal())}</strong>
-                            </div>
-
-                            <div className="notes-section">
-                                <label htmlFor="notes">Ghi chú:</label>
-                                <textarea
-                                    id="notes"
-                                    rows="3"
-                                    placeholder="Thêm ghi chú cho đơn hàng..."
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                    className="notes-input"
-                                />
-                            </div>
 
                             <button
                                 className="btn-checkout"
                                 onClick={handleCheckout}
                                 disabled={isSubmitting || items.length === 0 || !currentTable}
                             >
-                                {isSubmitting ? 'Đang xử lý...' : 'Đặt hàng'}
+                                {isSubmitting ? 'Đang xử lý...' : 'Đặt hàng ngay'}
                             </button>
 
-                            <button
-                                className="btn-continue"
-                                onClick={() => navigate('/menu')}
-                            >
+                            <button className="btn-continue" onClick={() => navigate('/menu')}>
                                 Tiếp tục chọn món
                             </button>
                         </div>
-                    </div>
-                )}
-            </div>
+                    </aside>
+                </div>
+            )}
         </div>
-    );
+    </div>
+);
 };
 
 export default CartPage;

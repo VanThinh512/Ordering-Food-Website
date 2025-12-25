@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import categoryService from '../../services/Category';
 import productService from '../../services/Product';
-
 
 const CategoryManagementPage = () => {
     const navigate = useNavigate();
@@ -13,6 +13,7 @@ const CategoryManagementPage = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState('add');
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -47,7 +48,7 @@ const CategoryManagementPage = () => {
             ]);
             setCategories(categoriesData);
             setProducts(productsData);
-            console.log('✅ Loaded data:', { categoriesData, productsData });
+            console.log('Loaded data:', { categoriesData, productsData });
         } catch (error) {
             console.error('Error loading data:', error);
             alert('Không thể tải dữ liệu');
@@ -56,14 +57,73 @@ const CategoryManagementPage = () => {
         }
     };
 
-    const filteredCategories = categories.filter(category =>
-        category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (category.description && category.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    const filteredCategories = useMemo(() => (
+        categories.filter(category =>
+            category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (category.description && category.description.toLowerCase().includes(searchTerm.toLowerCase()))
+        )
+    ), [categories, searchTerm]);
+
+    const categoryCountMap = useMemo(() => (
+        products.reduce((acc, product) => {
+            acc[product.category_id] = (acc[product.category_id] || 0) + 1;
+            return acc;
+        }, {})
+    ), [products]);
+
+    const describedCount = useMemo(
+        () => categories.filter(c => c.description?.trim()).length,
+        [categories]
     );
 
-    const getCategoryProductCount = (categoryId) => {
-        return products.filter(p => p.category_id === categoryId).length;
-    };
+    const busiestCategory = useMemo(() => {
+        let topCategory = null;
+        let maxCount = 0;
+        categories.forEach((category) => {
+            const count = categoryCountMap[category.id] || 0;
+            if (count > maxCount) {
+                maxCount = count;
+                topCategory = category;
+            }
+        });
+        return topCategory ? { ...topCategory, productCount: maxCount } : null;
+    }, [categories, categoryCountMap]);
+
+    const categoryStats = useMemo(() => {
+        const averageProducts = categories.length ? Math.round(products.length / categories.length) : 0;
+        return [
+            {
+                label: 'Tổng danh mục',
+                value: categories.length,
+                meta: '+2 trong tuần này',
+                icon: '',
+                accent: 'accent-cyan',
+            },
+            {
+                label: 'Món ăn được gắn',
+                value: products.length,
+                meta: 'Trên toàn bộ hệ thống',
+                icon: '',
+                accent: 'accent-orange',
+            },
+            {
+                label: 'Có mô tả',
+                value: describedCount,
+                meta: 'Giúp học sinh hiểu menu',
+                icon: '',
+                accent: 'accent-purple',
+            },
+            {
+                label: 'TB món/danh mục',
+                value: averageProducts,
+                meta: 'Cân bằng thực đơn',
+                icon: '',
+                accent: 'accent-green',
+            },
+        ];
+    }, [categories, products, describedCount]);
+
+    const getCategoryProductCount = (categoryId) => categoryCountMap[categoryId] || 0;
 
     const openAddModal = () => {
         setModalMode('add');
@@ -134,14 +194,14 @@ const CategoryManagementPage = () => {
                 description: formData.description.trim() || null
             };
 
-            console.log('📝 Submitting category data:', categoryData);
+            console.log('Submitting category data:', categoryData);
 
             if (modalMode === 'add') {
-                console.log('➕ Creating new category...');
+                console.log('Creating new category...');
                 await categoryService.create(categoryData);
                 alert('Thêm danh mục thành công!');
             } else {
-                console.log('✏️ Updating category:', selectedCategory.id);
+                console.log('Updating category:', selectedCategory.id);
                 await categoryService.update(selectedCategory.id, categoryData);
                 alert('Cập nhật danh mục thành công!');
             }
@@ -149,7 +209,7 @@ const CategoryManagementPage = () => {
             closeModal();
             loadData();
         } catch (error) {
-            console.error('❌ Error submitting category:', error);
+            console.error('Error submitting category:', error);
 
             let errorMessage = 'Có lỗi xảy ra. Vui lòng thử lại.';
 
@@ -183,7 +243,7 @@ const CategoryManagementPage = () => {
         }
 
         try {
-            console.log('🗑️ Deleting category:', categoryId);
+            console.log('Deleting category:', categoryId);
             await categoryService.delete(categoryId);
             alert('Xóa danh mục thành công!');
             loadData();
@@ -205,53 +265,59 @@ const CategoryManagementPage = () => {
     return (
         <div className="category-management-page">
             <div className="container">
-                {/* Header */}
-                <div className="page-header">
-                    <div className="header-content">
-                        <h1 className="page-title">
-                            <span className="title-icon">📂</span>
-                            Quản lý danh mục
-                        </h1>
-                        <p className="page-subtitle">
-                            Quản lý các danh mục món ăn trong hệ thống
+                <div className="category-admin-hero glass-panel">
+                    <div className="category-hero-copy">
+                        <p className="dashboard-eyebrow">Điều phối thực đơn</p>
+                        <h1>Danh mục tinh gọn, menu dễ hiểu</h1>
+                        <p>
+                            Gom nhóm món ăn theo phong cách trực quan để học sinh duyệt nhanh chóng.
+                            Cập nhật danh mục sẽ đồng bộ ngay lên app và quầy bán.
                         </p>
-                    </div>
-                    <button className="btn-add-category" onClick={openAddModal}>
-                        <span className="btn-icon">+</span>
-                        Thêm danh mục mới
-                    </button>
-                </div>
-
-                {/* Stats Cards */}
-                <div className="stats-grid">
-                    <div className="stat-card">
-                        <div className="stat-icon">📊</div>
-                        <div className="stat-content">
-                            <span className="stat-label">Tổng danh mục</span>
-                            <strong className="stat-value">{categories.length}</strong>
+                        <div className="hero-actions">
+                            <button className="btn-primary" onClick={openAddModal}>
+                                + Thêm danh mục
+                            </button>
+                            <button className="btn-secondary" onClick={loadData}>
+                                Làm mới dữ liệu
+                            </button>
                         </div>
                     </div>
-                    <div className="stat-card">
-                        <div className="stat-icon">🍽️</div>
-                        <div className="stat-content">
-                            <span className="stat-label">Tổng món ăn</span>
-                            <strong className="stat-value">{products.length}</strong>
+                    <div className="category-hero-card">
+                        <div>
+                            <p className="card-label">Danh mục nổi bật</p>
+                            <h2>{busiestCategory?.name || 'Chưa có dữ liệu'}</h2>
+                            <p className="card-meta">
+                                {busiestCategory ? `${busiestCategory.productCount} món đang được gắn` : 'Hãy thêm món vào danh mục để theo dõi'}
+                            </p>
                         </div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-icon">📝</div>
-                        <div className="stat-content">
-                            <span className="stat-label">Có mô tả</span>
-                            <strong className="stat-value">
-                                {categories.filter(c => c.description).length}
-                            </strong>
+                        <div className="category-hero-insights">
+                            <div>
+                                <span>Danh mục tổng</span>
+                                <strong>{categories.length}</strong>
+                            </div>
+                            <div>
+                                <span>Mô tả đã viết</span>
+                                <strong>{describedCount}</strong>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Search */}
-                <div className="search-section">
-                    <div className="search-box">
+                <div className="category-stats-grid">
+                    {categoryStats.map((stat) => (
+                        <div key={stat.label} className={`category-stat-card ${stat.accent}`}>
+                            <div className="stat-icon">{stat.icon}</div>
+                            <div>
+                                <p>{stat.label}</p>
+                                <h3>{stat.value}</h3>
+                                <span>{stat.meta}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="category-toolbar">
+                    <div className="search-box elevated">
                         <span className="search-icon">🔍</span>
                         <input
                             type="text"
@@ -260,12 +326,19 @@ const CategoryManagementPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="search-input"
                         />
+                        {searchTerm && (
+                            <button className="filter-clear" onClick={() => setSearchTerm('')}>
+                                ×
+                            </button>
+                        )}
                     </div>
+                    <button className="btn-primary" onClick={openAddModal}>
+                        + Danh mục mới
+                    </button>
                 </div>
 
-                {/* Categories Table */}
                 {filteredCategories.length === 0 ? (
-                    <div className="empty-state">
+                    <div className="empty-state glass-panel">
                         <div className="empty-icon">📂</div>
                         <h2>Không tìm thấy danh mục</h2>
                         <p>Thử tìm kiếm với từ khóa khác hoặc thêm danh mục mới</p>
@@ -274,89 +347,64 @@ const CategoryManagementPage = () => {
                         </button>
                     </div>
                 ) : (
-                    <div className="categories-table-container">
-                        <table className="categories-table">
-                            <thead>
-                                <tr>
-                                    <th>Icon</th>
-                                    <th>Tên danh mục</th>
-                                    <th>Mô tả</th>
-                                    <th>Số món ăn</th>
-                                    <th>Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredCategories.map((category) => {
-                                    const productCount = getCategoryProductCount(category.id);
-                                    return (
-                                        <tr key={category.id}>
-                                            <td>
-                                                <div className="category-icon-cell">
-                                                    📁
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className="category-info-cell">
-                                                    <strong className="category-name">{category.name}</strong>
-                                                    <span className="category-id-text">ID: {category.id}</span>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <p className="category-description-text">
-                                                    {category.description || <em style={{ color: 'rgba(226, 232, 240, 0.5)' }}>Chưa có mô tả</em>}
-                                                </p>
-                                            </td>
-                                            <td>
-                                                <div className="product-count-badge">
-                                                    <span className="count-icon">🍽️</span>
-                                                    <strong>{productCount} món</strong>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className="action-buttons">
-                                                    <button
-                                                        className="btn-action btn-view"
-                                                        onClick={() => navigate(`/admin/products?category=${category.id}`)}
-                                                        title="Xem món ăn"
-                                                    >
-                                                        👁️
-                                                    </button>
-                                                    <button
-                                                        className="btn-action btn-edit"
-                                                        onClick={() => openEditModal(category)}
-                                                        title="Chỉnh sửa"
-                                                    >
-                                                        ✏️
-                                                    </button>
-                                                    <button
-                                                        className="btn-action btn-delete"
-                                                        onClick={() => handleDelete(category.id, category.name)}
-                                                        title="Xóa"
-                                                    >
-                                                        🗑️
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                    <div className="category-grid">
+                        {filteredCategories.map((category) => {
+                            const productCount = getCategoryProductCount(category.id);
+                            return (
+                                <div key={category.id} className="category-card">
+                                    <div className="category-card-header">
+                                        <div className="category-icon">📁</div>
+                                        <div>
+                                            <p className="card-label">Danh mục #{category.id}</p>
+                                            <h3>{category.name}</h3>
+                                        </div>
+                                    </div>
+                                    <p className="category-card-description">
+                                        {category.description || 'Chưa có mô tả. Hãy bổ sung để học sinh hiểu rõ hơn.'}
+                                    </p>
+                                    <div className="category-card-meta">
+                                        <div className="category-count-pill">
+                                            <span>🍽️</span>
+                                            <strong>{productCount} món</strong>
+                                        </div>
+                                        <button
+                                            className="link-button"
+                                            onClick={() => navigate(`/admin/products?category=${category.id}`)}
+                                        >
+                                            Xem món
+                                        </button>
+                                    </div>
+                                    <div className="category-card-actions">
+                                        <button className="btn-secondary ghost" onClick={() => openEditModal(category)}>
+                                            ✏️ Chỉnh sửa
+                                        </button>
+                                        <button className="btn-danger ghost" onClick={() => handleDelete(category.id, category.name)}>
+                                            🗑️ Xóa
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
 
-                {/* Modal */}
                 {showModal && (
-                    <div className="modal-overlay" onClick={closeModal}>
-                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                            <div className="modal-header">
-                                <h2 className="modal-title">
-                                    {modalMode === 'add' ? '➕ Thêm danh mục mới' : '✏️ Chỉnh sửa danh mục'}
-                                </h2>
-                                <button className="modal-close" onClick={closeModal}>✕</button>
+                    <div className="modal-overlay category-modal-overlay" onClick={closeModal}>
+                        <div className="modal-content category-modal" onClick={(e) => e.stopPropagation()}>
+                            <div className="category-modal-header">
+                                <div>
+                                    <p className="dashboard-eyebrow">
+                                        {modalMode === 'add' ? 'Thêm danh mục mới' : 'Chỉnh sửa danh mục'}
+                                    </p>
+                                    <h2>{modalMode === 'add' ? 'Tạo nhóm món ăn mới' : selectedCategory?.name}</h2>
+                                    <span>Đặt tên và mô tả ngắn để menu rõ ràng hơn.</span>
+                                </div>
+                                <button className="btn-close-circle" onClick={closeModal}>
+                                    ×
+                                </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="modal-form">
+                            <form onSubmit={handleSubmit} className="category-modal-form">
                                 <div className="form-group">
                                     <label htmlFor="name">
                                         Tên danh mục <span className="required">*</span>
@@ -388,11 +436,11 @@ const CategoryManagementPage = () => {
                                     </small>
                                 </div>
 
-                                <div className="modal-footer">
-                                    <button type="button" className="btn-cancel" onClick={closeModal}>
+                                <div className="category-modal-footer">
+                                    <button type="button" className="btn-secondary" onClick={closeModal}>
                                         Hủy
                                     </button>
-                                    <button type="submit" className="btn-submit" disabled={submitting}>
+                                    <button type="submit" className="btn-primary" disabled={submitting}>
                                         {submitting ? 'Đang xử lý...' : modalMode === 'add' ? 'Thêm danh mục' : 'Cập nhật'}
                                     </button>
                                 </div>
