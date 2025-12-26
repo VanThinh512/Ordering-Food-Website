@@ -12,8 +12,12 @@ import MenuPage from './pages/MenuPage'
 import CartPage from './pages/CartPage'
 import OrdersPage from './pages/OrdersPage'
 import ProfilePage from './pages/ProfilePage'
-import TablesPage from './pages/TablesPage' // Thêm
-import TableManagementPage from './pages/adminpages/TableManagementPage' // Thêm
+import TablesPage from './pages/TablesPage'
+import TableManagementPage from './pages/adminpages/TableManagementPage'
+import ProductManagementPage from './pages/adminpages/ProductManagementPage'
+import CategoryManagementPage from './pages/adminpages/CategoryManagementPage'
+import OrderManagementPage from './pages/adminpages/OrderManagementPage'
+import UserManagementPage from './pages/adminpages/UserManagementPage'
 import DashBoard from './pages/adminpages/DashBoard'
 import './App.css'
 import './style.css'
@@ -87,6 +91,38 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <DashBoard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/products"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <ProductManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/categories"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <CategoryManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <OrderManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <UserManagementPage />
               </ProtectedRoute>
             }
           />

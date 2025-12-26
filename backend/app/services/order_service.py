@@ -7,10 +7,11 @@ from fastapi import HTTPException, status
 from app.crud.order import order as order_crud
 from app.crud.cart import cart as cart_crud
 from app.crud.table import table as table_crud
+from app.crud.reservation import reservation as reservation_crud
 from app.crud.product import product as product_crud
 from app.models.order import Order
 from app.schemas.order import OrderCreate
-from app.utils.enums import OrderStatus, PaymentStatus, TableStatus
+from app.utils.enums import OrderStatus, PaymentStatus, TableStatus, ReservationStatus
 
 
 class OrderService:
@@ -47,6 +48,7 @@ class OrderService:
                     )
         
         # Validate table if dine-in
+        reservation = None
         if order_in.table_id:
             table = table_crud.get(db, id=order_in.table_id)
             if not table:
@@ -54,10 +56,32 @@ class OrderService:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Table not found",
                 )
-            if table.status != TableStatus.AVAILABLE:
+
+            # Require reservation when ordering dine-in
+            if not order_in.reservation_id:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Table is not available",
+                    detail="Reservation is required for dine-in orders",
+                )
+
+            reservation = reservation_crud.get(db, id=order_in.reservation_id)
+            if not reservation or reservation.table_id != order_in.table_id:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Reservation not found for this table",
+                )
+            if reservation.user_id != user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Reservation does not belong to current user",
+                )
+            if reservation.status not in (
+                ReservationStatus.CONFIRMED,
+                ReservationStatus.ACTIVE,
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Reservation is not in a valid state",
                 )
         
         # Calculate total and prepare order items
@@ -84,9 +108,8 @@ class OrderService:
             items=order_items,
             total_amount=total_amount,
         )
-        
-        # Update table status if dine-in
-        if order_in.table_id:
+        if reservation:
+            reservation_crud.attach_order(db, reservation_id=reservation.id, order_id=order.id)
             table_crud.update_status(
                 db, table_id=order_in.table_id, status=TableStatus.OCCUPIED
             )
@@ -126,6 +149,12 @@ class OrderService:
                 table_crud.update_status(
                     db, table_id=order.table_id, status=TableStatus.AVAILABLE
                 )
+            if order.reservation:
+                reservation_crud.update_status(
+                    db,
+                    reservation_id=order.reservation.id,
+                    status=ReservationStatus.COMPLETED,
+                )
             
             # Auto-mark as paid when completed
             order.payment_status = PaymentStatus.PAID
@@ -139,6 +168,13 @@ class OrderService:
             if order.table_id:
                 table_crud.update_status(
                     db, table_id=order.table_id, status=TableStatus.AVAILABLE
+                )
+            if order.reservation:
+                reservation_crud.update_status(
+                    db,
+                    reservation_id=order.reservation.id,
+                    status=ReservationStatus.CANCELLED,
+                    clear_order=False,
                 )
             
             # Restore stock

@@ -1,6 +1,7 @@
 """Cart models."""
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
+from sqlalchemy import Column, Unicode
 from sqlmodel import SQLModel, Field, Relationship
 
 if TYPE_CHECKING:
@@ -38,6 +39,11 @@ class CartItem(SQLModel, table=True):
     
     # Store price at time of adding to cart
     price_at_time: float = Field(ge=0)
+    # notes: Optional[str] = Field(
+    #     default=None,
+    #     sa_column=Column("notes", Unicode(500), nullable=True),
+    #     max_length=500
+    # )
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = Field(default=None)

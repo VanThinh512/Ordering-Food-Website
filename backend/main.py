@@ -52,6 +52,14 @@ def health_check():
     return {"status": "healthy"}
 
 
+@app.middleware("http")
+async def add_charset_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Type"] = "application/json; charset=utf-8"
+    return response
+
+
+
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

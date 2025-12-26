@@ -1,4 +1,5 @@
 """Table endpoints."""
+from datetime import datetime
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session
@@ -9,6 +10,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.table import Table, TableCreate, TableUpdate
 from app.utils.enums import TableStatus
+from app.services.table_status_service import annotate_tables_with_reservations
 
 router = APIRouter()
 
@@ -19,13 +21,27 @@ def read_tables(
     skip: int = 0,
     limit: int = 100,
     status_filter: TableStatus = Query(None, description="Filter by table status"),
+    date: datetime = Query(None, description="Target date for availability check"),
+    start_time: str = Query(None, description="Start time HH:MM"),
+    end_time: str = Query(None, description="End time HH:MM"),
 ) -> Any:
     """Retrieve tables."""
     if status_filter:
         tables = table_crud.get_by_status(db, status=status_filter, skip=skip, limit=limit)
     else:
         tables = table_crud.get_multi(db, skip=skip, limit=limit)
-    return tables
+
+    target_start = target_end = None
+    if date and start_time and end_time:
+        target_start = datetime.combine(date.date(), datetime.strptime(start_time, "%H:%M").time())
+        target_end = datetime.combine(date.date(), datetime.strptime(end_time, "%H:%M").time())
+
+    return annotate_tables_with_reservations(
+        db,
+        tables,
+        target_start=target_start,
+        target_end=target_end,
+    )
 
 
 @router.get("/available", response_model=List[Table])
@@ -36,7 +52,7 @@ def read_available_tables(
 ) -> Any:
     """Get available tables."""
     tables = table_crud.get_available(db, skip=skip, limit=limit)
-    return tables
+    return annotate_tables_with_reservations(db, tables)
 
 
 @router.post("/", response_model=Table, status_code=status.HTTP_201_CREATED)
