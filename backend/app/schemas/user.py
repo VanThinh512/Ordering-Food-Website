@@ -37,6 +37,12 @@ class UserUpdate(BaseModel):
     class_name: Optional[str] = None
 
 
+class PasswordChange(BaseModel):
+    """Schema for password change requests."""
+    current_password: str = Field(..., min_length=6)
+    new_password: str = Field(..., min_length=6)
+
+
 # Properties shared by models stored in DB
 class UserInDBBase(UserBase):
     """User in database base schema."""

@@ -31,6 +31,120 @@ const OrdersPage = () => {
         return statusClasses[status] || '';
     };
 
+    const calculateOrderTotal = (order) => {
+        if (!order) return 0;
+
+        const totalCandidates = [
+            order.total,
+            order.total_amount,
+            order.totalAmount,
+            order.total_price,
+            order.totalPrice,
+        ];
+
+        for (const candidate of totalCandidates) {
+            if (typeof candidate === 'number' && !Number.isNaN(candidate)) {
+                return candidate;
+            }
+        }
+
+        if (!Array.isArray(order.items)) return 0;
+
+        return order.items.reduce((sum, item) => {
+            const quantity = item.quantity ?? 1;
+            const unitPrice =
+                item.price_at_time ??
+                item.priceAtTime ??
+                item.unit_price ??
+                item.price ??
+                item.product_price ??
+                item.product?.price ??
+                0;
+            const lineTotal =
+                (typeof item.subtotal === 'number' && !Number.isNaN(item.subtotal))
+                    ? item.subtotal
+                    : unitPrice * quantity;
+
+            return sum + lineTotal;
+        }, 0);
+    };
+
+    const resolveReservation = (order) =>
+        order?.reservation ||
+        order?.table_reservation ||
+        order?.reservation_info ||
+        order?.reservationDetails;
+
+    const getReservationStartTime = (order) => {
+        const reservation = resolveReservation(order);
+        return (
+            reservation?.start_time ||
+            reservation?.startTime ||
+            reservation?.start ||
+            order?.reservation_start_time ||
+            null
+        );
+    };
+
+    const getReservationEndTime = (order) => {
+        const reservation = resolveReservation(order);
+        return (
+            reservation?.end_time ||
+            reservation?.endTime ||
+            reservation?.end ||
+            order?.reservation_end_time ||
+            null
+        );
+    };
+
+    const getOrderDateParts = (order) => {
+        if (!order) {
+            return { timeLabel: 'N/A', dateLabel: 'N/A' };
+        }
+
+        const startSource = getReservationStartTime(order);
+        const endSource = getReservationEndTime(order);
+        const fallbackSource = order.created_at;
+
+        const startDate = startSource ? new Date(startSource) : fallbackSource ? new Date(fallbackSource) : null;
+        const endDate = endSource ? new Date(endSource) : null;
+
+        const formatTime = (date) =>
+            date
+                ? new Intl.DateTimeFormat('vi-VN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }).format(date)
+                : null;
+
+        const formatDatePart = (date) =>
+            date
+                ? new Intl.DateTimeFormat('vi-VN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                }).format(date)
+                : 'N/A';
+
+        const startLabel = formatTime(startDate);
+        const endLabel = formatTime(endDate);
+
+        const fallbackDate = fallbackSource ? new Date(fallbackSource) : null;
+        const startDateFormatted = startDate ? formatDatePart(startDate) : formatDatePart(fallbackDate);
+        const endDateFormatted = endDate ? formatDatePart(endDate) : null;
+
+        const dateLabel =
+            endDateFormatted && endDateFormatted !== startDateFormatted
+                ? `${startDateFormatted} → ${endDateFormatted}`
+                : startDateFormatted;
+
+        const timeLabel = endLabel
+            ? `${startLabel || formatTime(fallbackDate)} - ${endLabel}`
+            : startLabel || formatTime(fallbackDate) || 'N/A';
+
+        return { timeLabel, dateLabel };
+    };
+
     const getTableLabel = (order) => {
         return order.table?.table_number
             || order.table?.number
@@ -222,7 +336,13 @@ const OrdersPage = () => {
                             <div className="order-header">
                                 <div>
                                     <p className="order-code">Đơn hàng #{order.id}</p>
-                                    <p className="order-date">{formatDate(order.created_at)}</p>
+                                    <div className="order-time">
+                                        <span className="time-icon">🕒</span>
+                                        <div className="time-info">
+                                            <strong>{getOrderDateParts(order).timeLabel}</strong>
+                                            <span>{getOrderDateParts(order).dateLabel}</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <span className={`order-status ${getStatusClass(order.status)}`}>
                                     {ORDER_STATUS_LABELS[order.status]}
@@ -233,7 +353,7 @@ const OrdersPage = () => {
                                 <div className="meta-pill">
                                     <span className="meta-label">Bàn</span>
                                     <strong>Bàn {getTableLabel(order)}</strong>
-                                    <span className="meta-desc">{order.table?.location}</span>
+                                    <span className="meta-desc"> {order.table?.location}</span>
                                 </div>
                                 <div className="meta-pill">
                                     <span className="meta-label">Khách hàng</span>
@@ -245,7 +365,7 @@ const OrdersPage = () => {
                                 </div>
                                 <div className="meta-pill">
                                     <span className="meta-label">Tổng cộng</span>
-                                    <strong>{formatPrice(order.total)}</strong>
+                                    <strong>{formatPrice(calculateOrderTotal(order))}</strong>
                                 </div>
                             </div>
 
@@ -269,8 +389,8 @@ const OrdersPage = () => {
 
                             <div className="order-footer">
                                 <div className="order-total">
-                                    <span>Tổng cộng</span>
-                                    <strong>{formatPrice(order.total)}</strong>
+                                    <span>Tổng cộng: </span>
+                                    <strong>{formatPrice(calculateOrderTotal(order))}</strong>
                                 </div>
 
                                 {order.status === 'pending' && (

@@ -100,6 +100,8 @@ class OrderInDBBase(OrderBase):
     total_amount: float
     status: OrderStatus
     payment_status: PaymentStatus
+    reservation_start_time: Optional[datetime] = None
+    reservation_end_time: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
