@@ -468,7 +468,7 @@ const TablesPage = () => {
                         </div>
                         <div className="info-card">
                             <div className="info-icon">🔔</div>
-                            <h4>Thông báo theo thực gian thực</h4>
+                            <h4>Thông báo theo thời gian thực</h4>
                             <p>Nhận thông báo ngay trên thiết bị khi bàn đã sẵn sàng.</p>
                         </div>
                         <div className="info-card">
