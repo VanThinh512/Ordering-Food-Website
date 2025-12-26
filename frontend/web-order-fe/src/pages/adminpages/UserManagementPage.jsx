@@ -560,7 +560,7 @@ const UserManagementPage = () => {
 
                                                     <button
                                                         className="btn-action btn-delete"
-                                                        onClick={() => handleDelete(u.id, u.username)}
+                                                        onClick={() => handleDelete(u.id, u.username, u.email, u.full_name, u.phone)}
                                                         disabled={isCurrentUser}
                                                         title={isCurrentUser ? 'Không thể xóa tài khoản của bạn' : 'Xóa'}
                                                     >
