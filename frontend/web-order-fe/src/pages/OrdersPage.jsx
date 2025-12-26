@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useOrderStore } from '../stores/orderStore';
 import { formatPrice, formatDate } from '../utils/helpers';
 import { ORDER_STATUS_LABELS } from '../types';
@@ -6,6 +6,8 @@ import { ORDER_STATUS_LABELS } from '../types';
 const OrdersPage = () => {
     const { orders, fetchMyOrders, cancelOrder } = useOrderStore();
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
 
     useEffect(() => {
         loadOrders();
@@ -15,17 +17,6 @@ const OrdersPage = () => {
         setLoading(true);
         await fetchMyOrders();
         setLoading(false);
-    };
-
-    const handleCancelOrder = async (orderId) => {
-        if (confirm('Bạn có chắc muốn hủy đơn hàng này?')) {
-            const result = await cancelOrder(orderId);
-            if (result.success) {
-                alert('Đã hủy đơn hàng');
-            } else {
-                alert(result.error || 'Không thể hủy đơn hàng');
-            }
-        }
     };
 
     const getStatusClass = (status) => {
@@ -38,6 +29,196 @@ const OrdersPage = () => {
             cancelled: 'status-cancelled',
         };
         return statusClasses[status] || '';
+    };
+
+    const calculateOrderTotal = (order) => {
+        if (!order) return 0;
+
+        const totalCandidates = [
+            order.total,
+            order.total_amount,
+            order.totalAmount,
+            order.total_price,
+            order.totalPrice,
+        ];
+
+        for (const candidate of totalCandidates) {
+            if (typeof candidate === 'number' && !Number.isNaN(candidate)) {
+                return candidate;
+            }
+        }
+
+        if (!Array.isArray(order.items)) return 0;
+
+        return order.items.reduce((sum, item) => {
+            const quantity = item.quantity ?? 1;
+            const unitPrice =
+                item.price_at_time ??
+                item.priceAtTime ??
+                item.unit_price ??
+                item.price ??
+                item.product_price ??
+                item.product?.price ??
+                0;
+            const lineTotal =
+                (typeof item.subtotal === 'number' && !Number.isNaN(item.subtotal))
+                    ? item.subtotal
+                    : unitPrice * quantity;
+
+            return sum + lineTotal;
+        }, 0);
+    };
+
+    const resolveReservation = (order) =>
+        order?.reservation ||
+        order?.table_reservation ||
+        order?.reservation_info ||
+        order?.reservationDetails;
+
+    const getReservationStartTime = (order) => {
+        const reservation = resolveReservation(order);
+        return (
+            reservation?.start_time ||
+            reservation?.startTime ||
+            reservation?.start ||
+            order?.reservation_start_time ||
+            null
+        );
+    };
+
+    const getReservationEndTime = (order) => {
+        const reservation = resolveReservation(order);
+        return (
+            reservation?.end_time ||
+            reservation?.endTime ||
+            reservation?.end ||
+            order?.reservation_end_time ||
+            null
+        );
+    };
+
+    const getOrderDateParts = (order) => {
+        if (!order) {
+            return { timeLabel: 'N/A', dateLabel: 'N/A' };
+        }
+
+        const startSource = getReservationStartTime(order);
+        const endSource = getReservationEndTime(order);
+        const fallbackSource = order.created_at;
+
+        const startDate = startSource ? new Date(startSource) : fallbackSource ? new Date(fallbackSource) : null;
+        const endDate = endSource ? new Date(endSource) : null;
+
+        const formatTime = (date) =>
+            date
+                ? new Intl.DateTimeFormat('vi-VN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }).format(date)
+                : null;
+
+        const formatDatePart = (date) =>
+            date
+                ? new Intl.DateTimeFormat('vi-VN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                }).format(date)
+                : 'N/A';
+
+        const startLabel = formatTime(startDate);
+        const endLabel = formatTime(endDate);
+
+        const fallbackDate = fallbackSource ? new Date(fallbackSource) : null;
+        const startDateFormatted = startDate ? formatDatePart(startDate) : formatDatePart(fallbackDate);
+        const endDateFormatted = endDate ? formatDatePart(endDate) : null;
+
+        const dateLabel =
+            endDateFormatted && endDateFormatted !== startDateFormatted
+                ? `${startDateFormatted} → ${endDateFormatted}`
+                : startDateFormatted;
+
+        const timeLabel = endLabel
+            ? `${startLabel || formatTime(fallbackDate)} - ${endLabel}`
+            : startLabel || formatTime(fallbackDate) || 'N/A';
+
+        return { timeLabel, dateLabel };
+    };
+
+    const getTableLabel = (order) => {
+        return order.table?.table_number
+            || order.table?.number
+            || order.table_number
+            || order.table?.name
+            || order.table?.id
+            || '—';
+    };
+
+    const getCustomerName = (order) => {
+        return order.user?.full_name
+            || order.customer_name
+            || order.user?.username
+            || 'Khách hàng';
+    };
+
+    const statusSummary = useMemo(() => {
+        const base = {
+            total: orders?.length || 0,
+            pending: 0,
+            confirmed: 0,
+            preparing: 0,
+            ready: 0,
+            delivered: 0,
+            cancelled: 0
+        };
+        (orders || []).forEach((order) => {
+            if (order.status && base[order.status] !== undefined) {
+                base[order.status] += 1;
+            }
+        });
+        return base;
+    }, [orders]);
+
+    const statusFilters = [
+        { key: 'all', label: 'Tất cả' },
+        { key: 'pending', label: 'Chờ xác nhận' },
+        { key: 'confirmed', label: 'Đã xác nhận' },
+        { key: 'preparing', label: 'Đang chuẩn bị' },
+        { key: 'ready', label: 'Sẵn sàng' },
+        { key: 'delivered', label: 'Hoàn thành' },
+        { key: 'cancelled', label: 'Đã hủy' }
+    ];
+
+    const filteredOrders = useMemo(() => {
+        if (!orders) return [];
+        return orders.filter((order) => {
+            const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+            if (!matchesStatus) return false;
+
+            if (!searchQuery.trim()) return true;
+            const query = searchQuery.toLowerCase();
+            const tokens = [
+                `#${order.id}`,
+                `Bàn ${getTableLabel(order)}`,
+                order.table?.location,
+                getCustomerName(order),
+                ORDER_STATUS_LABELS[order.status]
+            ];
+            return tokens
+                .filter(Boolean)
+                .some((value) => value.toString().toLowerCase().includes(query));
+        });
+    }, [orders, searchQuery, statusFilter]);
+
+    const handleCancelOrder = async (orderId) => {
+        if (confirm('Bạn có chắc muốn hủy đơn hàng này?')) {
+            const result = await cancelOrder(orderId);
+            if (result.success) {
+                alert('Đã hủy đơn hàng');
+            } else {
+                alert(result.error || 'Không thể hủy đơn hàng');
+            }
+        }
     };
 
     if (loading) {
@@ -63,65 +244,161 @@ const OrdersPage = () => {
         );
     }
 
+    const summaryCards = [
+        {
+            label: 'Tổng đơn hàng',
+            value: statusSummary.total,
+            icon: '📊',
+            accent: 'accent-purple'
+        },
+        {
+            label: 'Chờ xác nhận',
+            value: statusSummary.pending + statusSummary.confirmed,
+            icon: '⏳',
+            accent: 'accent-orange'
+        },
+        {
+            label: 'Đang chuẩn bị',
+            value: statusSummary.preparing,
+            icon: '👨‍🍳',
+            accent: 'accent-cyan'
+        },
+        {
+            label: 'Hoàn thành',
+            value: statusSummary.delivered,
+            icon: '✅',
+            accent: 'accent-green'
+        }
+    ];
+
     return (
         <div className="orders-page">
-            <div className="container">
-                <h1 className="page-title">Đơn hàng của tôi</h1>
+            <div className="orders-backdrop"></div>
+            <div className="container orders-container">
+                <section className="orders-hero">
+                    <div>
+                        <span className="orders-kicker">Trung tâm đơn hàng</span>
+                        <h1>Quản lý đơn hàng</h1>
+                        <p>Theo dõi trạng thái từng đơn hàng và xử lý nhanh chóng trong cùng một nơi.</p>
+                    </div>
+                    <button className="orders-refresh-btn" onClick={loadOrders}>
+                        <span className="refresh-icon">↻</span> Làm mới
+                    </button>
+                </section>
+
+                <section className="orders-summary-grid">
+                    {summaryCards.map((card) => (
+                        <div key={card.label} className={`orders-stat-card ${card.accent}`}>
+                            <div className="stat-icon">{card.icon}</div>
+                            <p className="stat-label">{card.label}</p>
+                            <p className="stat-value">{card.value}</p>
+                        </div>
+                    ))}
+                </section>
+
+                <section className="orders-filter-bar">
+                    <div className="orders-search">
+                        <span className="search-icon">🔍</span>
+                        <input
+                            type="text"
+                            placeholder="Tìm theo mã đơn, bàn, khách hàng..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <div className="orders-filters">
+                        {statusFilters.map((filterOption) => (
+                            <button
+                                key={filterOption.key}
+                                className={`orders-filter-btn ${statusFilter === filterOption.key ? 'active' : ''}`}
+                                onClick={() => setStatusFilter(filterOption.key)}
+                            >
+                                {filterOption.label}
+                                {filterOption.key !== 'all' && (
+                                    <span className="filter-count-pill">{statusSummary[filterOption.key] || 0}</span>
+                                )}
+                                {filterOption.key === 'all' && (
+                                    <span className="filter-count-pill">{statusSummary.total}</span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </section>
 
                 <div className="orders-list">
-                    {orders.map((order) => (
-                        <div key={order.id} className="order-card">
+                    {filteredOrders.length === 0 && (
+                        <div className="orders-empty-state">
+                            <p>Không có đơn hàng phù hợp với bộ lọc hiện tại.</p>
+                        </div>
+                    )}
+                    {filteredOrders.map((order) => (
+                        <div key={order.id} className="order-card glass-panel">
                             <div className="order-header">
-                                <div className="order-info">
-                                    <h3>Đơn hàng #{order.id}</h3>
-                                    <p className="order-date">{formatDate(order.created_at)}</p>
+                                <div>
+                                    <p className="order-code">Đơn hàng #{order.id}</p>
+                                    <div className="order-time">
+                                        <span className="time-icon">🕒</span>
+                                        <div className="time-info">
+                                            <strong>{getOrderDateParts(order).timeLabel}</strong>
+                                            <span>{getOrderDateParts(order).dateLabel}</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <span className={`order-status ${getStatusClass(order.status)}`}>
                                     {ORDER_STATUS_LABELS[order.status]}
                                 </span>
                             </div>
 
-                            <div className="order-details">
-                                <div className="order-table">
-                                    <strong>Bàn:</strong> {order.table.number} - {order.table.location}
+                            <div className="order-meta">
+                                <div className="meta-pill">
+                                    <span className="meta-label">Bàn</span>
+                                    <strong>Bàn {getTableLabel(order)}</strong>
+                                    <span className="meta-desc"> {order.table?.location}</span>
                                 </div>
-
-                                <div className="order-items">
-                                    <h4>Món đã đặt:</h4>
-                                    {order.items.map((item) => (
-                                        <div key={item.id} className="order-item">
-                                            <span className="item-name">
-                                                {item.product.name} x{item.quantity}
-                                            </span>
-                                            <span className="item-price">
-                                                {formatPrice(item.subtotal)}
-                                            </span>
-                                        </div>
-                                    ))}
+                                <div className="meta-pill">
+                                    <span className="meta-label">Khách hàng</span>
+                                    <strong>{getCustomerName(order)}</strong>
                                 </div>
-
-                                {order.notes && (
-                                    <div className="order-notes">
-                                        <strong>Ghi chú:</strong> {order.notes}
-                                    </div>
-                                )}
-
-                                <div className="order-total">
-                                    <strong>Tổng cộng:</strong>
-                                    <span className="total-amount">{formatPrice(order.total)}</span>
+                                <div className="meta-pill">
+                                    <span className="meta-label">Số món</span>
+                                    <strong>{order.items.length}</strong>
+                                </div>
+                                <div className="meta-pill">
+                                    <span className="meta-label">Tổng cộng</span>
+                                    <strong>{formatPrice(calculateOrderTotal(order))}</strong>
                                 </div>
                             </div>
 
-                            {order.status === 'pending' && (
-                                <div className="order-actions">
-                                    <button
-                                        onClick={() => handleCancelOrder(order.id)}
-                                        className="btn-cancel-order"
-                                    >
-                                        Hủy đơn hàng
-                                    </button>
+                            <div className="order-items">
+                                {order.items.map((item) => (
+                                    <div key={item.id} className="order-item">
+                                        <div>
+                                            <p className="item-name">{item.product.name}</p>
+                                            <span className="item-qty">x{item.quantity}</span>
+                                        </div>
+                                        <p className="item-price">{formatPrice(item.subtotal)}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {order.notes && (
+                                <div className="order-notes">
+                                    <p>{order.notes}</p>
                                 </div>
                             )}
+
+                            <div className="order-footer">
+                                <div className="order-total">
+                                    <span>Tổng cộng: </span>
+                                    <strong>{formatPrice(calculateOrderTotal(order))}</strong>
+                                </div>
+
+                                {order.status === 'pending' && (
+                                    <button className="btn-cancel-order" onClick={() => handleCancelOrder(order.id)}>
+                                        Hủy đơn hàng
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>

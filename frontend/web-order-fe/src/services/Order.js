@@ -31,6 +31,25 @@ const orderService = {
         }
     },
 
+    getMyOrders: async () => {
+        try {
+            const token = getAuthToken();
+            if (!token) {
+                throw new Error('Vui lòng đăng nhập');
+            }
+
+            const response = await axios.get(`${API_URL}/orders/`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching my orders:', error);
+            throw error;
+        }
+    },
+
     getAll: async () => {
         try {
             const token = getAuthToken();
@@ -85,6 +104,25 @@ const orderService = {
             return response.data;
         } catch (error) {
             console.error('Error updating order status:', error);
+            throw error;
+        }
+    },
+
+    cancelOrder: async (id) => {
+        try {
+            const token = getAuthToken();
+            if (!token) {
+                throw new Error('Vui lòng đăng nhập');
+            }
+
+            const response = await axios.post(`${API_URL}/orders/${id}/cancel`, null, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error cancelling order:', error);
             throw error;
         }
     },

@@ -1,10 +1,10 @@
 /* eslint-disable no-undef */
 import { useState, useEffect } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import orderService from '../../services/Order';
 import { formatPrice } from '../../utils/helpers';
-
 
 const OrderManagementPage = () => {
     const navigate = useNavigate();
@@ -81,7 +81,6 @@ const OrderManagementPage = () => {
         }
     };
 
-    // Helper functions - Kiểm tra tất cả các trường có thể
     const getTableInfo = (order) => {
         console.log('🪑 Getting table for order:', order.id, {
             table_number: order.table_number,
@@ -113,13 +112,85 @@ const OrderManagementPage = () => {
     };
 
     const getOrderItems = (order) => {
-        const items = order.order_items || order.items || [];
+        const items = Array.isArray(order.order_items)
+            ? order.order_items
+            : Array.isArray(order.items)
+                ? order.items
+                : [];
         console.log(`📝 Order #${order.id} items:`, items);
         return items;
     };
 
+    const resolveReservation = (order) =>
+        order.reservation ||
+        order.table_reservation ||
+        order.reservation_info ||
+        order.reservationDetails;
+
+    const getReservationStartTime = (order) => {
+        const reservation = resolveReservation(order);
+        return (
+            reservation?.start_time ||
+            reservation?.startTime ||
+            reservation?.start ||
+            null
+        );
+    };
+
+    const getReservationEndTime = (order) => {
+        const reservation = resolveReservation(order);
+        return (
+            reservation?.end_time ||
+            reservation?.endTime ||
+            reservation?.end ||
+            null
+        );
+    };
+
+    const getOrderDateParts = (order) => {
+        const startSource = getReservationStartTime(order);
+        const endSource = getReservationEndTime(order);
+        const fallbackSource = order.created_at;
+
+        const startDate = startSource ? new Date(startSource) : fallbackSource ? new Date(fallbackSource) : null;
+        const endDate = endSource ? new Date(endSource) : null;
+
+        const formatTime = (date) =>
+            date
+                ? new Intl.DateTimeFormat('vi-VN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }).format(date)
+                : null;
+
+        const formatDate = (date) =>
+            date
+                ? new Intl.DateTimeFormat('vi-VN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                }).format(date)
+                : 'N/A';
+
+        const startLabel = formatTime(startDate);
+        const endLabel = formatTime(endDate);
+
+        const startDateFormatted = startDate ? formatDate(startDate) : formatDate(fallbackSource ? new Date(fallbackSource) : null);
+        const endDateFormatted = endDate ? formatDate(endDate) : null;
+
+        const dateLabel = endDateFormatted && endDateFormatted !== startDateFormatted
+            ? `${startDateFormatted} → ${endDateFormatted}`
+            : startDateFormatted;
+
+        const timeLabel = endLabel ? `${startLabel} - ${endLabel}` : startLabel || formatTime(fallbackSource ? new Date(fallbackSource) : null) || 'N/A';
+
+        return {
+            timeLabel,
+            dateLabel
+        };
+    };
+
     const calculateTotal = (order) => {
-        // Nếu có total_amount hoặc total_price trực tiếp
         if (order.total_amount) {
             console.log(`💰 Order #${order.id} total from total_amount:`, order.total_amount);
             return order.total_amount;
@@ -135,19 +206,25 @@ const OrderManagementPage = () => {
             return order.total;
         }
 
-        // Tính từ items
         const items = getOrderItems(order);
-
         if (!items || items.length === 0) {
             console.log(`💰 Order #${order.id} has no items, total: 0`);
             return 0;
         }
 
         const total = items.reduce((sum, item) => {
-            const price = item.price || item.product_price || item.unit_price || 0;
             const quantity = item.quantity || 1;
-            console.log(`  - Item: ${item.product_name || item.name}, price: ${price}, qty: ${quantity}`);
-            return sum + (price * quantity);
+            const unitPrice =
+                item.price_at_time ??
+                item.unit_price ??
+                item.price ??
+                item.product_price ??
+                item.product?.price ??
+                (item.subtotal && item.quantity ? item.subtotal / item.quantity : 0) ??
+                0;
+            const lineTotal = item.subtotal ?? unitPrice * quantity;
+            console.log(`  - Item: ${item.product_name || item.name}, price: ${unitPrice}, qty: ${quantity}`);
+            return sum + lineTotal;
         }, 0);
 
         console.log(`💰 Order #${order.id} calculated total:`, total);
@@ -356,6 +433,8 @@ const OrderManagementPage = () => {
                                     const statusInfo = ORDER_STATUSES[order.status] || ORDER_STATUSES.pending;
                                     const items = getOrderItems(order);
                                     const total = calculateTotal(order);
+                                    const orderDate = getOrderDateParts(order);
+
                                     const tableInfo = getTableInfo(order);
                                     const customerName = getCustomerName(order);
                                     const customerPhone = getCustomerPhone(order);
@@ -368,7 +447,10 @@ const OrderManagementPage = () => {
                                             <td>
                                                 <div className="order-time">
                                                     <span className="time-icon">🕐</span>
-                                                    {formatDateTime(order.created_at)}
+                                                    <div className="time-info">
+                                                        <strong>{orderDate.timeLabel}</strong>
+                                                        <span>{orderDate.dateLabel}</span>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td>
@@ -452,15 +534,16 @@ const OrderManagementPage = () => {
                                         <h3 className="section-title">Thông tin đơn hàng</h3>
                                         <div className="info-grid">
                                             <div className="info-item">
-                                                <span className="info-label">Mã đơn:</span>
+                                                <span className="info-label">Mã đơn: </span>
                                                 <strong>#{selectedOrder.id}</strong>
                                             </div>
                                             <div className="info-item">
-                                                <span className="info-label">Thời gian:</span>
-                                                <span>{formatDateTime(selectedOrder.created_at)}</span>
+                                                <span className="info-label">Thời gian: </span>
+                                                    <strong>{getOrderDateParts(selectedOrder).timeLabel}</strong>
+                                                    <span> | Ngày: {getOrderDateParts(selectedOrder).dateLabel}</span>
                                             </div>
                                             <div className="info-item">
-                                                <span className="info-label">Bàn:</span>
+                                                <span className="info-label">Bàn: </span>
                                                 <strong>Bàn {getTableInfo(selectedOrder)}</strong>
                                             </div>
                                             <div className="info-item">
@@ -483,11 +566,11 @@ const OrderManagementPage = () => {
                                         <h3 className="section-title">Thông tin khách hàng</h3>
                                         <div className="info-grid">
                                             <div className="info-item">
-                                                <span className="info-label">Tên:</span>
+                                                <span className="info-label">Tên: </span>
                                                 <strong>{getCustomerName(selectedOrder)}</strong>
                                             </div>
                                             <div className="info-item">
-                                                <span className="info-label">Số điện thoại:</span>
+                                                <span className="info-label">Số điện thoại: </span>
                                                 <span>{getCustomerPhone(selectedOrder) || 'N/A'}</span>
                                             </div>
                                         </div>
@@ -495,38 +578,63 @@ const OrderManagementPage = () => {
                                 </div>
 
                                 {/* Order Items */}
-                                <div className="detail-section">
-                                    <h3 className="section-title">Chi tiết món ăn</h3>
-                                    <div className="items-list">
-                                        {getOrderItems(selectedOrder).map((item, index) => {
-                                            const itemName = item.product_name || item.name || 'Món ăn';
-                                            const itemPrice = item.price || item.product_price || 0;
-                                            const itemQuantity = item.quantity || 1;
+                                <div className="order-items-panel">
+                                    <div className="items-header">
+                                        <div className="items-title">
+                                            <span className="items-title-icon">🍽️</span>
+                                            Chi tiết món ăn
+                                        </div>
 
-                                            return (
-                                                <div key={index} className="item-row">
-                                                    <div className="item-info">
-                                                        <span className="item-name">{itemName}</span>
-                                                        <span className="item-quantity">x{itemQuantity}</span>
-                                                    </div>
-                                                    <div className="item-price">
-                                                        <span className="unit-price">{formatPrice(itemPrice)}</span>
-                                                        <strong className="total-price">
-                                                            {formatPrice(itemPrice * itemQuantity)}
-                                                        </strong>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                        <span className="items-count-pill">
+                                            {getOrderItems(selectedOrder).length} món
+                                        </span>
                                     </div>
 
-                                    <div className="order-summary">
-                                        <div className="summary-row">
-                                            <span>Tổng cộng:</span>
-                                            <strong className="total-amount">
-                                                {formatPrice(calculateTotal(selectedOrder))}
-                                            </strong>
+                                    {getOrderItems(selectedOrder).length === 0 ? (
+                                        <p className="order-notes">Không có dữ liệu món ăn.</p>
+                                    ) : (
+                                        <div className="order-items-grid">
+                                            {getOrderItems(selectedOrder).map((item, index) => {
+                                                const itemName = item.product_name
+                                                    || item.name
+                                                    || item.product?.name
+                                                    || item.product?.title
+                                                    || 'Món ăn';
+                                                const itemQuantity = item.quantity || 1;
+                                                const unitPrice =
+                                                    item.price_at_time ??
+                                                    item.unit_price ??
+                                                    item.price ??
+                                                    item.product_price ??
+                                                    item.product?.price ??
+                                                    (item.subtotal && item.quantity ? item.subtotal / item.quantity : 0) ??
+                                                    0;
+                                                const lineTotal = item.subtotal ?? unitPrice * itemQuantity;
+
+                                                return (
+                                                    <div key={index} className="order-item-card">
+                                                        <div className="item-main">
+                                                            <div className="item-name">{itemName}</div>
+                                                            <span className="item-quantity-pill">x{itemQuantity}</span>
+                                                        </div>
+                                                        <div className="item-prices">
+                                                            <span className="unit-price">{formatPrice(unitPrice)}</span>
+                                                            <span className="line-price"> - Tổng: </span>
+                                                            <span className="line-price">
+                                                                {formatPrice(lineTotal)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
+                                    )}
+
+                                    <div className="order-summary-row">
+                                        <span>Tổng cộng</span>
+                                        <span className="summary-total-value">
+                                            {formatPrice(calculateTotal(selectedOrder))}
+                                        </span>
                                     </div>
                                 </div>
 
@@ -535,24 +643,6 @@ const OrderManagementPage = () => {
                                     <div className="detail-section">
                                         <h3 className="section-title">Ghi chú</h3>
                                         <p className="order-notes">{selectedOrder.notes || selectedOrder.note}</p>
-                                    </div>
-                                )}
-
-                                {/* Debug Info - Remove in production */}
-                                // eslint-disable-next-line no-undef
-                                {process.env.NODE_ENV === 'development' && (
-                                    <div className="detail-section">
-                                        <h3 className="section-title">Debug Info</h3>
-                                        <pre style={{
-                                            background: 'rgba(0,0,0,0.3)',
-                                            padding: '1rem',
-                                            borderRadius: '8px',
-                                            fontSize: '0.75rem',
-                                            overflow: 'auto',
-                                            maxHeight: '200px'
-                                        }}>
-                                            {JSON.stringify(selectedOrder, null, 2)}
-                                        </pre>
                                     </div>
                                 )}
                             </div>

@@ -174,7 +174,7 @@ class OrderService:
                     db,
                     reservation_id=order.reservation.id,
                     status=ReservationStatus.CANCELLED,
-                    clear_order=True,
+                    clear_order=False,
                 )
             
             # Restore stock

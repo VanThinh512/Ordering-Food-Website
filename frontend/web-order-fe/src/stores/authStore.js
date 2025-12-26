@@ -3,8 +3,9 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:8000/api/v1';
 
-export const useAuthStore = create((set) => ({
+export const useAuthStore = create((set, get) => ({
     user: null,
+
     token: localStorage.getItem('access_token'),
     isAuthenticated: !!localStorage.getItem('access_token'),
 
@@ -145,6 +146,108 @@ export const useAuthStore = create((set) => ({
                 token: null,
                 isAuthenticated: false,
             });
+        }
+    },
+
+    updateProfile: async (updates) => {
+        const token = localStorage.getItem('access_token');
+        const currentUser = get().user;
+
+        if (!token || !currentUser) {
+            return {
+                success: false,
+                error: 'Không tìm thấy thông tin đăng nhập. Vui lòng đăng nhập lại.'
+            };
+        }
+
+        try {
+            const response = await axios.put(
+                `${API_URL}/users/${currentUser.id}`,
+                updates,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            set({ user: response.data });
+
+            return {
+                success: true,
+                user: response.data,
+            };
+        } catch (error) {
+            console.error('Update profile failed:', error);
+
+            if (error.response?.status === 401) {
+                localStorage.removeItem('access_token');
+                set({
+                    user: null,
+                    token: null,
+                    isAuthenticated: false,
+                });
+                return {
+                    success: false,
+                    error: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+                };
+            }
+
+            return {
+                success: false,
+                error: error.response?.data?.detail || 'Không thể cập nhật thông tin',
+            };
+        }
+    },
+
+    changePassword: async ({ currentPassword, newPassword }) => {
+        const token = localStorage.getItem('access_token');
+        const currentUser = get().user;
+
+        if (!token || !currentUser) {
+            return {
+                success: false,
+                error: 'Vui lòng đăng nhập lại trước khi đổi mật khẩu.',
+            };
+        }
+
+        try {
+            await axios.post(
+                `${API_URL}/users/${currentUser.id}/change-password`,
+                {
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            return { success: true };
+        } catch (error) {
+            console.error('Change password failed:', error);
+
+            if (error.response?.status === 401) {
+                localStorage.removeItem('access_token');
+                set({
+                    user: null,
+                    token: null,
+                    isAuthenticated: false,
+                });
+                return {
+                    success: false,
+                    error: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+                };
+            }
+
+            return {
+                success: false,
+                error: error.response?.data?.detail || 'Không thể đổi mật khẩu',
+            };
         }
     },
 }));

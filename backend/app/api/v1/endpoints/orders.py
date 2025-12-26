@@ -7,7 +7,7 @@ from app.api.deps import get_current_active_user, get_current_active_superuser
 from app.crud.order import order as order_crud
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.order import Order, OrderCreate, OrderUpdate
+from app.schemas.order import Order, OrderCreate, OrderUpdate, OrderStatusUpdate
 from app.utils.enums import OrderStatus
 from app.services.order_service import order_service
 
@@ -91,12 +91,73 @@ def update_order(
     
     # If status is being updated, use the service method
     if order_in.status:
-        order = order_service.update_order_status(db, order_id=order_id, new_status=order_in.status)
-    else:
-        order = order_crud.update(db, db_obj=order, obj_in=order_in)
-    
+        return order_service.update_order_status(db, order_id=order_id, new_status=order_in.status)
+
+    order = order_crud.update(db, db_obj=order, obj_in=order_in)
     return order
 
+
+@router.patch("/{order_id}/status", response_model=Order)
+def update_order_status(
+    *,
+    db: Session = Depends(get_db),
+    order_id: int,
+    status_in: OrderStatusUpdate,
+    current_user: User = Depends(get_current_active_superuser),
+) -> Any:
+    """Patch endpoint dedicated to status updates (admin only)."""
+    order = order_service.update_order_status(db, order_id=order_id, new_status=status_in.status)
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found",
+        )
+    return order
+
+
+@router.post("/{order_id}/cancel", response_model=Order)
+def cancel_order(
+    *,
+    db: Session = Depends(get_db),
+    order_id: int,
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """Allow users to cancel their own pending/confirmed orders."""
+    order = order_crud.get(db, id=order_id)
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found",
+        )
+
+    # Permission check
+    if order.user_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions",
+        )
+
+    if order.status in (OrderStatus.CANCELLED, OrderStatus.COMPLETED):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Order cannot be cancelled in its current state",
+        )
+
+    allowed_statuses = {
+        OrderStatus.PENDING,
+        OrderStatus.CONFIRMED,
+        OrderStatus.PREPARING,
+    }
+    if order.status not in allowed_statuses and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Order cannot be cancelled at this stage",
+        )
+
+    order = order_service.update_order_status(
+        db, order_id=order_id, new_status=OrderStatus.CANCELLED
+    )
+    return order
 
 
 @router.delete("/{order_id}", response_model=Order)
