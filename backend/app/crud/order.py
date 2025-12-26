@@ -1,6 +1,7 @@
 """CRUD operations for Order model."""
 from typing import List, Optional
 from datetime import datetime
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.crud.base import CRUDBase
@@ -12,12 +13,36 @@ from app.utils.enums import OrderStatus
 class CRUDOrder(CRUDBase[Order, OrderCreate, dict]):
     """CRUD operations for Order model."""
 
+    def _with_related(self, statement):
+        """Ensure table, user, and items are eager-loaded."""
+        return statement.options(
+            selectinload(Order.table),
+            selectinload(Order.user),
+            selectinload(Order.items).selectinload(OrderItem.product),
+            selectinload(Order.reservation),
+        )
+
+    def get_multi(
+        self, db: Session, *, skip: int = 0, limit: int = 100
+    ) -> List[Order]:
+        statement = (
+            self._with_related(select(Order))
+            .order_by(Order.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        return db.exec(statement).all()
+
+    def get(self, db: Session, id: int) -> Optional[Order]:
+        statement = self._with_related(select(Order).where(Order.id == id))
+        return db.exec(statement).first()
+
     def get_by_user(
         self, db: Session, *, user_id: int, skip: int = 0, limit: int = 100
     ) -> List[Order]:
         """Get orders by user."""
         statement = (
-            select(Order)
+            self._with_related(select(Order))
             .where(Order.user_id == user_id)
             .order_by(Order.created_at.desc())
             .offset(skip)
@@ -30,7 +55,7 @@ class CRUDOrder(CRUDBase[Order, OrderCreate, dict]):
     ) -> List[Order]:
         """Get orders by status."""
         statement = (
-            select(Order)
+            self._with_related(select(Order))
             .where(Order.status == status)
             .order_by(Order.created_at.desc())
             .offset(skip)
@@ -80,7 +105,7 @@ class CRUDOrder(CRUDBase[Order, OrderCreate, dict]):
         self, db: Session, *, order_id: int, status: OrderStatus
     ) -> Optional[Order]:
         """Update order status."""
-        order = db.get(Order, order_id)
+        order = super().get(db, id=order_id)
         if order:
             order.status = status
             order.updated_at = datetime.utcnow()
