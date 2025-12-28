@@ -2,7 +2,7 @@
 Application configuration settings.
 Loaded from environment variables using pydantic-settings.
 """
-from typing import List, Union
+from typing import List, Union, Optional
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -65,6 +65,16 @@ class Settings(BaseSettings):
     
     # Logging
     LOG_LEVEL: str = "INFO"
+    
+    # Email Settings
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM_EMAIL: Optional[str] = None
+    SMTP_FROM_NAME: Optional[str] = "School Food Order"
+    SMTP_STARTTLS: bool = True
+    SMTP_USE_SSL: bool = False
     
     model_config = SettingsConfigDict(
         env_file=".env",
