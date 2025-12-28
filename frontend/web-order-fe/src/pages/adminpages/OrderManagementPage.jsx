@@ -148,41 +148,51 @@ const OrderManagementPage = () => {
     };
 
     const getOrderDateParts = (order) => {
+        if (!order) {
+            return { timeLabel: 'N/A', dateLabel: 'N/A' };
+        }
+
         const startSource = getReservationStartTime(order);
         const endSource = getReservationEndTime(order);
         const fallbackSource = order.created_at;
 
-        const startDate = startSource ? new Date(startSource) : fallbackSource ? new Date(fallbackSource) : null;
+        const startDate = startSource ? new Date(startSource) : null;
         const endDate = endSource ? new Date(endSource) : null;
+        const fallbackDate = fallbackSource ? new Date(fallbackSource) : null;
 
-        const formatTime = (date) =>
-            date
-                ? new Intl.DateTimeFormat('vi-VN', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }).format(date)
-                : null;
+        const timeFormatter = new Intl.DateTimeFormat('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Asia/Ho_Chi_Minh'
+        });
+        const dateFormatter = new Intl.DateTimeFormat('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            timeZone: 'Asia/Ho_Chi_Minh'
+        });
 
-        const formatDate = (date) =>
-            date
-                ? new Intl.DateTimeFormat('vi-VN', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                }).format(date)
-                : 'N/A';
+        const startLabel = startDate ? timeFormatter.format(startDate) : null;
+        const endLabel = endDate ? timeFormatter.format(endDate) : null;
+        const fallbackTime = fallbackDate ? timeFormatter.format(fallbackDate) : 'N/A';
+        const fallbackDateLabel = fallbackDate ? dateFormatter.format(fallbackDate) : 'N/A';
 
-        const startLabel = formatTime(startDate);
-        const endLabel = formatTime(endDate);
+        const primaryStartDateLabel = startDate ? dateFormatter.format(startDate) : null;
+        const primaryEndDateLabel = endDate ? dateFormatter.format(endDate) : null;
 
-        const startDateFormatted = startDate ? formatDate(startDate) : formatDate(fallbackSource ? new Date(fallbackSource) : null);
-        const endDateFormatted = endDate ? formatDate(endDate) : null;
+        const dateLabel =
+            primaryStartDateLabel
+                ? primaryEndDateLabel && primaryEndDateLabel !== primaryStartDateLabel
+                    ? `${primaryStartDateLabel} → ${primaryEndDateLabel}`
+                    : primaryStartDateLabel
+                : fallbackDateLabel;
 
-        const dateLabel = endDateFormatted && endDateFormatted !== startDateFormatted
-            ? `${startDateFormatted} → ${endDateFormatted}`
-            : startDateFormatted;
-
-        const timeLabel = endLabel ? `${startLabel} - ${endLabel}` : startLabel || formatTime(fallbackSource ? new Date(fallbackSource) : null) || 'N/A';
+        const hasReservationWindow = Boolean(startLabel || endLabel);
+        const timeLabel = hasReservationWindow
+            ? endLabel
+                ? `${startLabel || fallbackTime} - ${endLabel}`
+                : startLabel
+            : fallbackTime;
 
         return {
             timeLabel,
