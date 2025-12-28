@@ -202,6 +202,41 @@ class OrderService:
         }
 
     @staticmethod
+    def _sync_table_and_reservation(
+        db: Session, order: Optional[Order], status: OrderStatus
+    ) -> None:
+        """Keep table/reservation status in sync with order state."""
+        if not order or not order.table_id:
+            return
+
+        table_status = None
+        reservation_status = None
+
+        if status in (OrderStatus.PENDING, OrderStatus.CONFIRMED):
+            table_status = TableStatus.RESERVED
+            reservation_status = ReservationStatus.CONFIRMED
+        elif status in (OrderStatus.PREPARING, OrderStatus.READY):
+            table_status = TableStatus.OCCUPIED
+            reservation_status = ReservationStatus.ACTIVE
+        elif status == OrderStatus.CANCELLED:
+            table_status = TableStatus.AVAILABLE
+            reservation_status = ReservationStatus.CANCELLED
+        elif status == OrderStatus.COMPLETED:
+            table_status = TableStatus.AVAILABLE
+            reservation_status = ReservationStatus.COMPLETED
+
+        if table_status:
+            table_crud.update_status(db, table_id=order.table_id, status=table_status)
+
+        if order.reservation and reservation_status:
+            reservation_crud.update_status(
+                db,
+                reservation_id=order.reservation.id,
+                status=reservation_status,
+                clear_order=False,
+            )
+
+    @staticmethod
     def create_order_from_cart(
         db: Session, user_id: int, order_in: OrderCreate
     ) -> Order:
@@ -295,7 +330,7 @@ class OrderService:
         if reservation:
             reservation_crud.attach_order(db, reservation_id=reservation.id, order_id=order.id)
             table_crud.update_status(
-                db, table_id=order_in.table_id, status=TableStatus.OCCUPIED
+                db, table_id=order_in.table_id, status=TableStatus.RESERVED
             )
         
         # Update stock quantities
@@ -309,6 +344,8 @@ class OrderService:
         
         # Reload order with relationships for notifications
         full_order = order_crud.get(db, id=order.id)
+
+        OrderService._sync_table_and_reservation(db, full_order, OrderStatus.PENDING)
 
         email_payload = OrderService._build_status_email_payload(full_order, OrderStatus.PENDING)
         if email_payload:
@@ -337,7 +374,10 @@ class OrderService:
             )
         
         # Update status
-        order = order_crud.update_status(db, order_id=order_id, status=new_status)
+        order_crud.update_status(db, order_id=order_id, status=new_status)
+        order = order_crud.get(db, id=order_id)
+
+        OrderService._sync_table_and_reservation(db, order, new_status)
         
         email_payload = OrderService._build_status_email_payload(order, new_status)
         if email_payload:
@@ -350,17 +390,6 @@ class OrderService:
         
         # If completed, release table and update payment
         if new_status == OrderStatus.COMPLETED:
-            if order.table_id:
-                table_crud.update_status(
-                    db, table_id=order.table_id, status=TableStatus.AVAILABLE
-                )
-            if order.reservation:
-                reservation_crud.update_status(
-                    db,
-                    reservation_id=order.reservation.id,
-                    status=ReservationStatus.COMPLETED,
-                )
-            
             # Auto-mark as paid when completed
             order.payment_status = PaymentStatus.PAID
             order.updated_at = datetime.utcnow()
@@ -370,18 +399,6 @@ class OrderService:
         
         # If cancelled, release table and restore stock
         elif new_status == OrderStatus.CANCELLED:
-            if order.table_id:
-                table_crud.update_status(
-                    db, table_id=order.table_id, status=TableStatus.AVAILABLE
-                )
-            if order.reservation:
-                reservation_crud.update_status(
-                    db,
-                    reservation_id=order.reservation.id,
-                    status=ReservationStatus.CANCELLED,
-                    clear_order=False,
-                )
-            
             # Restore stock
             for order_item in order.items:
                 product = product_crud.get(db, id=order_item.product_id)
@@ -391,7 +408,7 @@ class OrderService:
             
             db.commit()
         
-        return order
+        return order_crud.get(db, id=order_id)
 
     @staticmethod
     def get_user_orders(
