@@ -140,7 +140,8 @@ const TablesPage = () => {
     };
 
     const handlePartySizeChange = (event) => {
-        setPartySize(event.target.value);
+        const value = Math.max(1, parseInt(event.target.value, 10) || 1);
+        setPartySize(value);
     };
 
     const timeSlots = useMemo(() => {
@@ -206,15 +207,25 @@ const TablesPage = () => {
         await fetchAllTables({ date: reservationDate, slot });
     };
 
-    const statusCounts = useMemo(() => ({
-        available: availableTables.filter(t => t.status === 'available').length,
-        reserved: availableTables.filter(t => t.status === 'reserved').length,
-        occupied: availableTables.filter(t => t.status === 'occupied').length
-    }), [availableTables]);
+    const normalizedPartySize = useMemo(() => Math.max(1, parseInt(partySize, 10) || 1), [partySize]);
+
+    const capacityFilteredTables = useMemo(
+        () => availableTables.filter((table) => (table.capacity || 0) >= normalizedPartySize),
+        [availableTables, normalizedPartySize]
+    );
+
+    const statusCounts = useMemo(
+        () => ({
+            available: capacityFilteredTables.filter((t) => t.status === 'available').length,
+            reserved: capacityFilteredTables.filter((t) => t.status === 'reserved').length,
+            occupied: capacityFilteredTables.filter((t) => t.status === 'occupied').length
+        }),
+        [capacityFilteredTables]
+    );
 
     const filteredTables = useMemo(
-        () => availableTables.filter(table => table.status === filter),
-        [availableTables, filter]
+        () => capacityFilteredTables.filter((table) => table.status === filter),
+        [capacityFilteredTables, filter]
     );
 
     const statusOptions = [

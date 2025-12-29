@@ -11,7 +11,7 @@ const RegisterPage = () => {
         password: '',
         confirmPassword: '',
         full_name: '',
-        phone_number: '',
+        phone: '',
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -126,12 +126,12 @@ const RegisterPage = () => {
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="phone_number">Số điện thoại</label>
+                                <label htmlFor="phone">Số điện thoại</label>
                                 <input
                                     type="tel"
-                                    id="phone_number"
-                                    name="phone_number"
-                                    value={formData.phone_number}
+                                    id="phone"
+                                    name="phone"
+                                    value={formData.phone}
                                     onChange={handleChange}
                                     placeholder="Nhập số điện thoại"
                                 />
