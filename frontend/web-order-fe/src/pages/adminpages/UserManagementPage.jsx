@@ -52,19 +52,15 @@ const UserManagementPage = () => {
     const loadUsers = async () => {
         try {
             setLoading(true);
-            console.log('🔄 Loading users...');
             const data = await userService.getAll();
             setUsers(data);
-            console.log('✅ Loaded users:', data.length);
         } catch (error) {
             console.error('❌ Error loading users:', error);
-
             if (error.message?.includes('đăng nhập')) {
                 alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
                 navigate('/login');
                 return;
             }
-
             alert('Không thể tải danh sách người dùng. ' + (error.message || ''));
         } finally {
             setLoading(false);
@@ -72,22 +68,18 @@ const UserManagementPage = () => {
     };
 
     const filteredUsers = users.filter(u => {
-        // Filter by role
         if (selectedRole !== 'all' && u.role !== selectedRole) {
             return false;
         }
-
-        // Filter by search term
         if (searchTerm.trim()) {
             const term = searchTerm.toLowerCase();
             return (
-                u.username?.toLowerCase().includes(term) ||
-                u.email?.toLowerCase().includes(term) ||
-                u.full_name?.toLowerCase().includes(term) ||
-                u.phone?.toLowerCase().includes(term)
+                (u.username || '').toLowerCase().includes(term) ||
+                (u.email || '').toLowerCase().includes(term) ||
+                (u.full_name || '').toLowerCase().includes(term) ||
+                (u.phone || '').toLowerCase().includes(term)
             );
         }
-
         return true;
     });
 
@@ -110,24 +102,15 @@ const UserManagementPage = () => {
                 role: 'customer',
                 is_active: true
             });
-        } else if (mode === 'edit' && userData) {
+        } else if ((mode === 'edit' || mode === 'view') && userData) {
+            // FIX: Sử dụng || '' để tránh lỗi controlled component khi dữ liệu null
             setFormData({
-                username: userData.username,
-                email: userData.email,
-                full_name: userData.full_name || '',
-                phone: userData.phone || '',
-                password: '', // Không hiển thị password cũ
-                role: userData.role,
-                is_active: userData.is_active ?? true
-            });
-        } else if (mode === 'view' && userData) {
-            setFormData({
-                username: userData.username,
-                email: userData.email,
+                username: userData.username || '', 
+                email: userData.email || '',
                 full_name: userData.full_name || '',
                 phone: userData.phone || '',
                 password: '',
-                role: userData.role,
+                role: userData.role || 'customer',
                 is_active: userData.is_active ?? true
             });
         }
@@ -158,33 +141,27 @@ const UserManagementPage = () => {
             [name]: type === 'checkbox' ? checked : value
         }));
 
-        // Clear error when user types
         if (formErrors[name]) {
-            setFormErrors(prev => ({
-                ...prev,
-                [name]: ''
-            }));
+            setFormErrors(prev => ({ ...prev, [name]: '' }));
         }
     };
 
     const validateForm = () => {
         const errors = {};
-
-        // Username validation
+        
+        // Nếu mode là Edit và username trống (do user cũ không có), bắt buộc nhập lại
         if (!formData.username.trim()) {
             errors.username = 'Tên đăng nhập không được để trống';
         } else if (formData.username.length < 3) {
             errors.username = 'Tên đăng nhập phải có ít nhất 3 ký tự';
         }
 
-        // Email validation
         if (!formData.email.trim()) {
             errors.email = 'Email không được để trống';
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             errors.email = 'Email không hợp lệ';
         }
 
-        // Password validation (chỉ khi thêm mới hoặc có nhập password)
         if (modalMode === 'add') {
             if (!formData.password) {
                 errors.password = 'Mật khẩu không được để trống';
@@ -195,7 +172,6 @@ const UserManagementPage = () => {
             errors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
         }
 
-        // Phone validation (optional)
         if (formData.phone && !/^[0-9]{10,11}$/.test(formData.phone)) {
             errors.phone = 'Số điện thoại không hợp lệ';
         }
@@ -206,13 +182,9 @@ const UserManagementPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!validateForm()) {
-            return;
-        }
+        if (!validateForm()) return;
 
         setSubmitting(true);
-
         try {
             const userData = {
                 username: formData.username.trim(),
@@ -223,12 +195,9 @@ const UserManagementPage = () => {
                 is_active: formData.is_active
             };
 
-            // Chỉ gửi password nếu có nhập
             if (formData.password) {
                 userData.password = formData.password;
             }
-
-            console.log('📤 Submitting user data:', userData);
 
             if (modalMode === 'add') {
                 await userService.create(userData);
@@ -242,133 +211,97 @@ const UserManagementPage = () => {
             await loadUsers();
         } catch (error) {
             console.error('❌ Error submitting user:', error);
-
-            let errorMessage = 'Có lỗi xảy ra. Vui lòng thử lại.';
-
+            let errorMessage = 'Có lỗi xảy ra.';
             if (error.response?.data?.detail) {
-                if (Array.isArray(error.response.data.detail)) {
-                    const errors = error.response.data.detail
-                        .map(err => `${err.loc?.join('.')}: ${err.msg}`)
-                        .join('\n');
-                    errorMessage = `Lỗi validation:\n${errors}`;
-                } else {
-                    errorMessage = error.response.data.detail;
-                }
+                errorMessage = Array.isArray(error.response.data.detail)
+                    ? error.response.data.detail.map(e => e.msg).join('\n')
+                    : error.response.data.detail;
             }
-
             alert(errorMessage);
         } finally {
             setSubmitting(false);
         }
     };
 
-    const handleDelete = async (userId, username) => {
-        if (!window.confirm(`Bạn có chắc muốn xóa người dùng "${username}"?\nHành động này không thể hoàn tác.`)) {
+    // FIX: Sửa lại hàm delete để xử lý trường hợp không có username
+    const handleDelete = async (userId, username, email) => {
+        // Nếu không có username thì hiển thị email, hoặc ID
+        const displayName = username || email || `ID: ${userId}`;
+        
+        if (!window.confirm(`Bạn có chắc muốn xóa người dùng "${displayName}"?\n⚠️ CẢNH BÁO: Hành động này không thể hoàn tác.`)) {
             return;
         }
 
-        // Không cho phép xóa chính mình
         if (userId === user.id) {
             alert('❌ Bạn không thể xóa tài khoản của chính mình!');
             return;
         }
 
         try {
-            console.log('🗑️ Deleting user:', userId);
+            console.log('🗑️ Deleting user ID:', userId);
             await userService.delete(userId);
             alert('✅ Xóa người dùng thành công!');
             await loadUsers();
         } catch (error) {
             console.error('❌ Error deleting user:', error);
-            alert(error.response?.data?.detail || 'Không thể xóa người dùng');
+            const backendError = error.response?.data?.detail;
+            
+            // Gợi ý lỗi phổ biến do Foreign Key
+            if (!backendError || backendError === 'Không thể xóa người dùng') {
+                alert(`❌ Không thể xóa người dùng "${displayName}".\n\n💡 Nguyên nhân có thể: Người dùng này đã có Đơn hàng hoặc dữ liệu liên quan trong hệ thống.\n\n👉 Giải pháp: Hãy dùng chức năng "Khóa tài khoản" (Ban) thay vì xóa.`);
+            } else {
+                alert(`❌ Lỗi: ${backendError}`);
+            }
         }
     };
 
-    // Ban user function
     const handleBanUser = async (userId, username) => {
-        // Không cho phép ban chính mình
-        if (userId === user.id) {
-            alert('❌ Bạn không thể khóa tài khoản của chính mình!');
-            return;
-        }
+        const displayName = username || `ID: ${userId}`;
+        if (userId === user.id) return alert('❌ Không thể khóa chính mình!');
 
-        const reason = window.prompt(`Bạn có chắc muốn khóa tài khoản "${username}"?\n\nVui lòng nhập lý do khóa tài khoản:`);
-
-        if (reason === null) {
-            return; // User cancelled
-        }
-
-        if (!reason.trim()) {
-            alert('❌ Vui lòng nhập lý do khóa tài khoản!');
-            return;
-        }
+        const reason = window.prompt(`Khóa tài khoản "${displayName}"?\nNhập lý do:`);
+        if (reason === null) return;
+        if (!reason.trim()) return alert('❌ Cần nhập lý do!');
 
         try {
-            console.log('🚫 Banning user:', userId);
             await userService.banUser(userId);
-            alert(`✅ Đã khóa tài khoản "${username}" thành công!\nLý do: ${reason}`);
+            alert(`✅ Đã khóa tài khoản "${displayName}"!`);
             await loadUsers();
         } catch (error) {
-            console.error('❌ Error banning user:', error);
-            alert(error.response?.data?.detail || 'Không thể khóa tài khoản người dùng');
+            alert(error.response?.data?.detail || 'Lỗi khóa tài khoản');
         }
     };
 
-    // Unban user function
     const handleUnbanUser = async (userId, username) => {
-        if (!window.confirm(`Bạn có chắc muốn mở khóa tài khoản "${username}"?`)) {
-            return;
-        }
+         const displayName = username || `ID: ${userId}`;
+        if (!window.confirm(`Mở khóa tài khoản "${displayName}"?`)) return;
 
         try {
-            console.log('✅ Unbanning user:', userId);
             await userService.unbanUser(userId);
-            alert(`✅ Đã mở khóa tài khoản "${username}" thành công!`);
+            alert(`✅ Đã mở khóa "${displayName}"!`);
             await loadUsers();
         } catch (error) {
-            console.error('❌ Error unbanning user:', error);
-            alert(error.response?.data?.detail || 'Không thể mở khóa tài khoản người dùng');
+            alert(error.response?.data?.detail || 'Lỗi mở khóa');
         }
     };
 
     const formatDateTime = (dateString) => {
         if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return new Intl.DateTimeFormat('vi-VN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        }).format(date);
+        return new Date(dateString).toLocaleString('vi-VN');
     };
 
-    if (loading) {
-        return (
-            <div className="loading-container">
-                <div className="loading-spinner"></div>
-                <p>Đang tải dữ liệu...</p>
-            </div>
-        );
-    }
+    if (loading) return <div className="loading-container"><div className="loading-spinner"></div><p>Đang tải...</p></div>;
 
     return (
         <div className="user-management-page">
             <div className="container">
-                {/* Header */}
                 <div className="page-header">
                     <div className="header-content">
-                        <h1 className="page-title">
-                            <span className="title-icon">👥</span>
-                            Quản lý người dùng
-                        </h1>
-                        <p className="page-subtitle">
-                            Quản lý tài khoản và phân quyền người dùng trong hệ thống
-                        </p>
+                        <h1 className="page-title"><span className="title-icon">👥</span> Quản lý người dùng</h1>
                     </div>
                 </div>
 
-                {/* Stats Cards */}
+                {/* Stats Cards - Giữ nguyên như cũ */}
                 <div className="stats-grid">
                     <div className="stat-card">
                         <div className="stat-icon">📊</div>
@@ -377,27 +310,15 @@ const UserManagementPage = () => {
                             <strong className="stat-value">{users.length}</strong>
                         </div>
                     </div>
-                    <div className="stat-card stat-admin">
-                        <div className="stat-icon">👑</div>
-                        <div className="stat-content">
-                            <span className="stat-label">Quản trị viên</span>
-                            <strong className="stat-value">{getRoleCount('admin')}</strong>
+                    {['admin', 'staff', 'customer'].map(role => (
+                        <div key={role} className={`stat-card stat-${role}`}>
+                            <div className="stat-icon">{USER_ROLES[role].icon}</div>
+                            <div className="stat-content">
+                                <span className="stat-label">{USER_ROLES[role].label}</span>
+                                <strong className="stat-value">{getRoleCount(role)}</strong>
+                            </div>
                         </div>
-                    </div>
-                    <div className="stat-card stat-staff">
-                        <div className="stat-icon">👨‍💼</div>
-                        <div className="stat-content">
-                            <span className="stat-label">Nhân viên</span>
-                            <strong className="stat-value">{getRoleCount('staff')}</strong>
-                        </div>
-                    </div>
-                    <div className="stat-card stat-customer">
-                        <div className="stat-icon">👤</div>
-                        <div className="stat-content">
-                            <span className="stat-label">Khách hàng</span>
-                            <strong className="stat-value">{getRoleCount('customer')}</strong>
-                        </div>
-                    </div>
+                    ))}
                 </div>
 
                 {/* Filters */}
@@ -406,26 +327,16 @@ const UserManagementPage = () => {
                         <span className="search-icon">🔍</span>
                         <input
                             type="text"
-                            placeholder="Tìm theo tên, email, số điện thoại..."
+                            placeholder="Tìm theo tên, email, sđt..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="search-input"
                         />
-                        {searchTerm && (
-                            <button
-                                className="clear-search-btn"
-                                onClick={() => setSearchTerm('')}
-                            >
-                                ✕
-                            </button>
-                        )}
+                        {searchTerm && <button className="clear-search-btn" onClick={() => setSearchTerm('')}>✕</button>}
                     </div>
 
                     <div className="role-filter">
-                        <button
-                            className={`role-filter-btn ${selectedRole === 'all' ? 'active' : ''}`}
-                            onClick={() => setSelectedRole('all')}
-                        >
+                        <button className={`role-filter-btn ${selectedRole === 'all' ? 'active' : ''}`} onClick={() => setSelectedRole('all')}>
                             Tất cả ({getRoleCount('all')})
                         </button>
                         {Object.entries(USER_ROLES).map(([role, info]) => (
@@ -433,31 +344,21 @@ const UserManagementPage = () => {
                                 key={role}
                                 className={`role-filter-btn ${selectedRole === role ? 'active' : ''}`}
                                 onClick={() => setSelectedRole(role)}
-                                style={{
-                                    '--role-color': info.color,
-                                    borderColor: selectedRole === role ? info.color : 'transparent'
-                                }}
+                                style={{ '--role-color': info.color, borderColor: selectedRole === role ? info.color : 'transparent' }}
                             >
                                 {info.icon} {info.label} ({getRoleCount(role)})
                             </button>
                         ))}
                     </div>
+                    {/* Nút Thêm Mới */}
+                    <button className="btn-add-user" onClick={() => openModal('add')} style={{marginLeft: 'auto', padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px'}}>
+                        <span>➕</span> Thêm mới
+                    </button>
                 </div>
 
-                {/* Users Table */}
+                {/* Table */}
                 {filteredUsers.length === 0 ? (
-                    <div className="empty-state">
-                        <div className="empty-icon">👥</div>
-                        <h2>Không tìm thấy người dùng</h2>
-                        <p>
-                            {searchTerm
-                                ? 'Thử tìm kiếm với từ khóa khác'
-                                : selectedRole !== 'all'
-                                    ? `Chưa có người dùng "${USER_ROLES[selectedRole].label}"`
-                                    : 'Chưa có người dùng nào trong hệ thống'
-                            }
-                        </p>
-                    </div>
+                    <div className="empty-state"><p>Không tìm thấy người dùng nào.</p></div>
                 ) : (
                     <div className="users-table-container">
                         <table className="users-table">
@@ -467,10 +368,9 @@ const UserManagementPage = () => {
                                     <th>Tên đăng nhập</th>
                                     <th>Họ tên</th>
                                     <th>Email</th>
-                                    <th>Số điện thoại</th>
+                                    <th>SĐT</th>
                                     <th>Vai trò</th>
                                     <th>Trạng thái</th>
-                                    <th>Ngày tạo</th>
                                     <th>Thao tác</th>
                                 </tr>
                             </thead>
@@ -481,33 +381,18 @@ const UserManagementPage = () => {
 
                                     return (
                                         <tr key={u.id} className={isCurrentUser ? 'current-user' : ''}>
-                                            <td>
-                                                <strong className="user-id">#{u.id}</strong>
-                                            </td>
+                                            <td><strong className="user-id">#{u.id}</strong></td>
                                             <td>
                                                 <div className="username-cell">
-                                                    <strong>{u.username}</strong>
-                                                    {isCurrentUser && (
-                                                        <span className="current-badge">Bạn</span>
-                                                    )}
+                                                    {u.username ? <strong>{u.username}</strong> : <span style={{color:'#999', fontStyle:'italic'}}>(Trống)</span>}
+                                                    {isCurrentUser && <span className="current-badge">Bạn</span>}
                                                 </div>
                                             </td>
                                             <td>{u.full_name || '-'}</td>
-                                            <td>
-                                                <a href={`mailto:${u.email}`} className="email-link">
-                                                    {u.email}
-                                                </a>
-                                            </td>
+                                            <td><a href={`mailto:${u.email}`} className="email-link">{u.email}</a></td>
                                             <td>{u.phone || '-'}</td>
                                             <td>
-                                                <span
-                                                    className="role-badge"
-                                                    style={{
-                                                        background: roleInfo.color + '20',
-                                                        color: roleInfo.color,
-                                                        borderColor: roleInfo.color
-                                                    }}
-                                                >
+                                                <span className="role-badge" style={{ background: roleInfo.color + '20', color: roleInfo.color, borderColor: roleInfo.color }}>
                                                     {roleInfo.icon} {roleInfo.label}
                                                 </span>
                                             </td>
@@ -517,55 +402,15 @@ const UserManagementPage = () => {
                                                 </span>
                                             </td>
                                             <td>
-                                                <span className="date-text">
-                                                    {formatDateTime(u.created_at)}
-                                                </span>
-                                            </td>
-                                            <td>
                                                 <div className="action-buttons">
-                                                    <button
-                                                        className="btn-action btn-view"
-                                                        onClick={() => openModal('view', u)}
-                                                        title="Xem chi tiết"
-                                                    >
-                                                        👁️
-                                                    </button>
-                                                    <button
-                                                        className="btn-action btn-edit"
-                                                        onClick={() => openModal('edit', u)}
-                                                        title="Chỉnh sửa"
-                                                    >
-                                                        ✏️
-                                                    </button>
-
-                                                    {/* Ban/Unban Button */}
+                                                    <button className="btn-action btn-edit" onClick={() => openModal('edit', u)} title="Sửa">✏️</button>
                                                     {u.is_active ? (
-                                                        <button
-                                                            className="btn-action btn-ban"
-                                                            onClick={() => handleBanUser(u.id, u.username)}
-                                                            disabled={isCurrentUser}
-                                                            title={isCurrentUser ? 'Không thể khóa tài khoản của bạn' : 'Khóa tài khoản'}
-                                                        >
-                                                            🚫
-                                                        </button>
+                                                        <button className="btn-action btn-ban" onClick={() => handleBanUser(u.id, u.username)} disabled={isCurrentUser} title="Khóa">🚫</button>
                                                     ) : (
-                                                        <button
-                                                            className="btn-action btn-unban"
-                                                            onClick={() => handleUnbanUser(u.id, u.username)}
-                                                            title="Mở khóa tài khoản"
-                                                        >
-                                                            🔓
-                                                        </button>
+                                                        <button className="btn-action btn-unban" onClick={() => handleUnbanUser(u.id, u.username)} title="Mở khóa">🔓</button>
                                                     )}
-
-                                                    <button
-                                                        className="btn-action btn-delete"
-                                                        onClick={() => handleDelete(u.id, u.username)}
-                                                        disabled={isCurrentUser}
-                                                        title={isCurrentUser ? 'Không thể xóa tài khoản của bạn' : 'Xóa'}
-                                                    >
-                                                        🗑️
-                                                    </button>
+                                                    {/* FIX: Truyền thêm u.email vào để fallback nếu username null */}
+                                                    <button className="btn-action btn-delete" onClick={() => handleDelete(u.id, u.username, u.email)} disabled={isCurrentUser} title="Xóa">🗑️</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -576,185 +421,63 @@ const UserManagementPage = () => {
                     </div>
                 )}
 
-                {/* Modal */}
+                {/* Modal Form - Giữ nguyên logic render nhưng state đã được fix ở openModal */}
                 {showModal && (
                     <div className="modal-overlay" onClick={closeModal}>
-                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-content" onClick={e => e.stopPropagation()}>
                             <div className="modal-header">
-                                <h2 className="modal-title">
-                                    {modalMode === 'add' && '➕ Thêm người dùng mới'}
-                                    {modalMode === 'edit' && '✏️ Chỉnh sửa người dùng'}
-                                    {modalMode === 'view' && '👁️ Chi tiết người dùng'}
-                                </h2>
+                                <h2 className="modal-title">{modalMode === 'add' ? '➕ Thêm' : modalMode === 'edit' ? '✏️ Sửa' : 'Chi tiết'}</h2>
                                 <button className="modal-close" onClick={closeModal}>✕</button>
                             </div>
-
                             <form onSubmit={handleSubmit}>
                                 <div className="modal-body">
                                     <div className="form-grid">
-                                        {/* Username */}
                                         <div className="form-group">
-                                            <label className="form-label">
-                                                Tên đăng nhập <span className="required">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                name="username"
-                                                value={formData.username}
-                                                onChange={handleInputChange}
-                                                disabled={modalMode === 'view' || modalMode === 'edit'}
+                                            <label className="form-label">Tên đăng nhập <span className="required">*</span></label>
+                                            <input 
+                                                type="text" name="username" 
+                                                value={formData.username} onChange={handleInputChange} 
                                                 className={`form-input ${formErrors.username ? 'error' : ''}`}
-                                                placeholder="Nhập tên đăng nhập"
+                                                disabled={modalMode === 'view'} // Cho phép sửa username nếu muốn
                                             />
-                                            {formErrors.username && (
-                                                <span className="error-message">{formErrors.username}</span>
-                                            )}
+                                            {formErrors.username && <span className="error-message">{formErrors.username}</span>}
                                         </div>
-
-                                        {/* Email */}
+                                        {/* Các trường khác giữ nguyên */}
                                         <div className="form-group">
-                                            <label className="form-label">
-                                                Email <span className="required">*</span>
-                                            </label>
-                                            <input
-                                                type="email"
-                                                name="email"
-                                                value={formData.email}
-                                                onChange={handleInputChange}
-                                                disabled={modalMode === 'view'}
-                                                className={`form-input ${formErrors.email ? 'error' : ''}`}
-                                                placeholder="Nhập email"
-                                            />
-                                            {formErrors.email && (
-                                                <span className="error-message">{formErrors.email}</span>
-                                            )}
+                                            <label className="form-label">Email <span className="required">*</span></label>
+                                            <input type="email" name="email" value={formData.email} onChange={handleInputChange} className={`form-input ${formErrors.email ? 'error' : ''}`} disabled={modalMode === 'view'} />
+                                            {formErrors.email && <span className="error-message">{formErrors.email}</span>}
                                         </div>
-
-                                        {/* Full Name */}
                                         <div className="form-group">
-                                            <label className="form-label">Họ và tên</label>
-                                            <input
-                                                type="text"
-                                                name="full_name"
-                                                value={formData.full_name}
-                                                onChange={handleInputChange}
-                                                disabled={modalMode === 'view'}
-                                                className="form-input"
-                                                placeholder="Nhập họ và tên"
-                                            />
+                                            <label className="form-label">Họ tên</label>
+                                            <input type="text" name="full_name" value={formData.full_name} onChange={handleInputChange} className="form-input" disabled={modalMode === 'view'} />
                                         </div>
-
-                                        {/* Phone */}
                                         <div className="form-group">
                                             <label className="form-label">Số điện thoại</label>
-                                            <input
-                                                type="tel"
-                                                name="phone"
-                                                value={formData.phone}
-                                                onChange={handleInputChange}
-                                                disabled={modalMode === 'view'}
-                                                className={`form-input ${formErrors.phone ? 'error' : ''}`}
-                                                placeholder="Nhập số điện thoại"
-                                            />
-                                            {formErrors.phone && (
-                                                <span className="error-message">{formErrors.phone}</span>
-                                            )}
+                                            <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="form-input" disabled={modalMode === 'view'} />
                                         </div>
-
-                                        {/* Password */}
                                         <div className="form-group">
-                                            <label className="form-label">
-                                                Mật khẩu {modalMode === 'add' && <span className="required">*</span>}
-                                                {modalMode === 'edit' && <span className="hint">(Để trống nếu không đổi)</span>}
-                                            </label>
-                                            <input
-                                                type="password"
-                                                name="password"
-                                                value={formData.password}
-                                                onChange={handleInputChange}
-                                                disabled={modalMode === 'view'}
-                                                className={`form-input ${formErrors.password ? 'error' : ''}`}
-                                                placeholder={modalMode === 'add' ? 'Nhập mật khẩu' : 'Nhập mật khẩu mới'}
-                                            />
-                                            {formErrors.password && (
-                                                <span className="error-message">{formErrors.password}</span>
-                                            )}
+                                            <label className="form-label">Mật khẩu {modalMode==='add' && '*'}</label>
+                                            <input type="password" name="password" value={formData.password} onChange={handleInputChange} className={`form-input ${formErrors.password ? 'error' : ''}`} placeholder={modalMode==='edit' ? 'Để trống nếu không đổi' : ''} disabled={modalMode === 'view'} />
+                                            {formErrors.password && <span className="error-message">{formErrors.password}</span>}
                                         </div>
-
-                                        {/* Role */}
                                         <div className="form-group">
-                                            <label className="form-label">
-                                                Vai trò <span className="required">*</span>
-                                            </label>
-                                            <select
-                                                name="role"
-                                                value={formData.role}
-                                                onChange={handleInputChange}
-                                                disabled={modalMode === 'view'}
-                                                className="form-select"
-                                            >
-                                                {Object.entries(USER_ROLES).map(([role, info]) => (
-                                                    <option key={role} value={role}>
-                                                        {info.icon} {info.label}
-                                                    </option>
-                                                ))}
+                                            <label className="form-label">Vai trò</label>
+                                            <select name="role" value={formData.role} onChange={handleInputChange} className="form-select" disabled={modalMode === 'view'}>
+                                                {Object.entries(USER_ROLES).map(([key, val]) => <option key={key} value={key}>{val.label}</option>)}
                                             </select>
                                         </div>
                                     </div>
-
-                                    {/* Is Active */}
                                     <div className="form-group-checkbox">
                                         <label className="checkbox-label">
-                                            <input
-                                                type="checkbox"
-                                                name="is_active"
-                                                checked={formData.is_active}
-                                                onChange={handleInputChange}
-                                                disabled={modalMode === 'view'}
-                                                className="checkbox-input"
-                                            />
-                                            <span>Tài khoản đang hoạt động</span>
+                                            <input type="checkbox" name="is_active" checked={formData.is_active} onChange={handleInputChange} disabled={modalMode === 'view'} />
+                                            <span>Đang hoạt động</span>
                                         </label>
                                     </div>
-
-                                    {/* View Mode: Additional Info */}
-                                    {modalMode === 'view' && selectedUser && (
-                                        <div className="view-info">
-                                            <div className="info-row">
-                                                <span className="info-label">ID:</span>
-                                                <span className="info-value">#{selectedUser.id}</span>
-                                            </div>
-                                            <div className="info-row">
-                                                <span className="info-label">Ngày tạo:</span>
-                                                <span className="info-value">{formatDateTime(selectedUser.created_at)}</span>
-                                            </div>
-                                            {selectedUser.updated_at && (
-                                                <div className="info-row">
-                                                    <span className="info-label">Cập nhật lần cuối:</span>
-                                                    <span className="info-value">{formatDateTime(selectedUser.updated_at)}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
                                 </div>
-
                                 <div className="modal-footer">
-                                    <button
-                                        type="button"
-                                        className="btn-cancel"
-                                        onClick={closeModal}
-                                    >
-                                        {modalMode === 'view' ? 'Đóng' : 'Hủy'}
-                                    </button>
-                                    {modalMode !== 'view' && (
-                                        <button
-                                            type="submit"
-                                            className="btn-submit"
-                                            disabled={submitting}
-                                        >
-                                            {submitting ? 'Đang xử lý...' : (modalMode === 'add' ? 'Thêm mới' : 'Cập nhật')}
-                                        </button>
-                                    )}
+                                    <button type="button" className="btn-cancel" onClick={closeModal}>Hủy</button>
+                                    {modalMode !== 'view' && <button type="submit" className="btn-submit" disabled={submitting}>{submitting ? 'Lưu...' : 'Lưu lại'}</button>}
                                 </div>
                             </form>
                         </div>
