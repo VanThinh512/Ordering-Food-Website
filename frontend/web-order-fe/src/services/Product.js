@@ -24,7 +24,8 @@ const productService = {
     getByCategory: async (categoryId) => {
         try {
             const token = getAuthToken();
-            const response = await axios.get(`${API_URL}/products/category/${categoryId}`, {
+            const response = await axios.get(`${API_URL}/products/`, {
+                params: { category_id: categoryId, available_only: true },
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
             return response.data;
@@ -158,8 +159,8 @@ const productService = {
     search: async (searchTerm) => {
         try {
             const token = getAuthToken();
-            const response = await axios.get(`${API_URL}/products/`, {
-                params: { search: searchTerm },
+            const response = await axios.get(`${API_URL}/products/search`, {
+                params: { q: searchTerm },
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
             return response.data;

@@ -4,6 +4,30 @@ import { useNavigate } from 'react-router-dom';
 import { useTableStore } from '../stores/tableStore';
 import { useAuthStore } from '../stores/authStore';
 
+const VIETNAM_OFFSET_MINUTES = -7 * 60; // UTC+7
+
+const getVietnamNow = () => {
+    const now = new Date();
+    const localOffset = now.getTimezoneOffset();
+    const diffMinutes = VIETNAM_OFFSET_MINUTES - localOffset;
+    return new Date(now.getTime() + diffMinutes * 60 * 1000);
+};
+
+const formatVietnamTime = (date) =>
+    new Intl.DateTimeFormat('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(date);
+
+const formatVietnamDate = (date) =>
+    new Intl.DateTimeFormat('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    }).format(date);
+
 const TablesPage = () => {
     const navigate = useNavigate();
     const {
@@ -15,11 +39,6 @@ const TablesPage = () => {
         setReservationDate,
         partySize,
         setPartySize,
-        // availableSlots,
-        // fetchTableAvailability,
-        // slotLoading,
-        // selectedSlot,
-        // selectSlot,
         prepareReservation,
         selectedReservation,
         clearReservation,
@@ -31,6 +50,8 @@ const TablesPage = () => {
     const [filter, setFilter] = useState('available');
     const [pendingSlotId, setPendingSlotId] = useState('');
     const [confirmedSlot, setConfirmedSlot] = useState(null);
+    const [vietnamNow, setVietnamNow] = useState(getVietnamNow());
+    const [realtimeSlot, setRealtimeSlot] = useState(null);
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -119,7 +140,8 @@ const TablesPage = () => {
     };
 
     const handlePartySizeChange = (event) => {
-        setPartySize(event.target.value);
+        const value = Math.max(1, parseInt(event.target.value, 10) || 1);
+        setPartySize(value);
     };
 
     const timeSlots = useMemo(() => {
@@ -137,11 +159,44 @@ const TablesPage = () => {
         return slots;
     }, []);
 
+    const findSlotForTime = (date) => {
+        if (!date) return null;
+        return timeSlots.find((slot) => {
+            const [startHour, startMinute] = slot.start.split(':').map(Number);
+            const [endHour, endMinute] = slot.end.split(':').map(Number);
+            const slotStart = new Date(date);
+            slotStart.setHours(startHour, startMinute, 0, 0);
+            const slotEnd = new Date(date);
+            slotEnd.setHours(endHour, endMinute, 0, 0);
+            return date >= slotStart && date < slotEnd;
+        }) || null;
+    };
+
+    useEffect(() => {
+        const updateRealtimeContext = () => {
+            const now = getVietnamNow();
+            setVietnamNow(now);
+            setRealtimeSlot(findSlotForTime(now));
+        };
+
+        updateRealtimeContext();
+
+        const intervalId = setInterval(() => {
+            updateRealtimeContext();
+            if (!confirmedSlot) {
+                fetchAllTables();
+            }
+        }, 60_000);
+
+        return () => clearInterval(intervalId);
+    }, [confirmedSlot, fetchAllTables, timeSlots]);
+
     const handleConfirmWindow = async () => {
         if (!pendingSlotId) {
             alert('Vui lòng chọn khung giờ trước khi xác nhận.');
             return;
         }
+
         const slot = timeSlots.find((item) => item.id === pendingSlotId);
         if (!slot) return;
 
@@ -152,21 +207,26 @@ const TablesPage = () => {
         await fetchAllTables({ date: reservationDate, slot });
     };
 
-    const statusCounts = confirmedSlot
-        ? {
-            available: availableTables.filter(t => t.status === 'available').length,
-            reserved: availableTables.filter(t => t.status === 'reserved').length,
-            occupied: availableTables.filter(t => t.status === 'occupied').length
-        }
-        : {
-            available: 0,
-            reserved: 0,
-            occupied: 0
-        };
+    const normalizedPartySize = useMemo(() => Math.max(1, parseInt(partySize, 10) || 1), [partySize]);
 
-    const filteredTables = confirmedSlot
-        ? availableTables.filter(table => table.status === filter)
-        : [];
+    const capacityFilteredTables = useMemo(
+        () => availableTables.filter((table) => (table.capacity || 0) >= normalizedPartySize),
+        [availableTables, normalizedPartySize]
+    );
+
+    const statusCounts = useMemo(
+        () => ({
+            available: capacityFilteredTables.filter((t) => t.status === 'available').length,
+            reserved: capacityFilteredTables.filter((t) => t.status === 'reserved').length,
+            occupied: capacityFilteredTables.filter((t) => t.status === 'occupied').length
+        }),
+        [capacityFilteredTables]
+    );
+
+    const filteredTables = useMemo(
+        () => capacityFilteredTables.filter((table) => table.status === filter),
+        [capacityFilteredTables, filter]
+    );
 
     const statusOptions = [
         { key: 'available', label: 'Bàn trống', icon: '✅' },
@@ -224,6 +284,21 @@ const TablesPage = () => {
                             <span className="filter-count">{statusCounts[option.key]}</span>
                         </button>
                     ))}
+                </div>
+
+                <div className="realtime-banner glass-panel">
+                    <div>
+                        <p className="realtime-eyebrow">Theo dõi theo thời gian thực (GMT+7)</p>
+                        <h3>{formatVietnamTime(vietnamNow)} · {formatVietnamDate(vietnamNow)}</h3>
+                        <p className="realtime-caption">
+                            Khung giờ hiện tại: {realtimeSlot ? realtimeSlot.label : 'Ngoài khung phục vụ'}
+                        </p>
+                    </div>
+                    {!confirmedSlot && (
+                        <div className="realtime-chip">
+                            Đang hiển thị trạng thái tức thời
+                        </div>
+                    )}
                 </div>
 
                 {!confirmedSlot ? (
@@ -292,7 +367,7 @@ const TablesPage = () => {
                         </div>
 
                         {/* Confirm Button */}
-                        {selectedTableId && (
+                        {selectedTableId && confirmedSlot && (
                             <div className="table-confirm-section">
                                 <div className="confirm-card">
                                     <div className="confirm-info">
@@ -468,7 +543,7 @@ const TablesPage = () => {
                         </div>
                         <div className="info-card">
                             <div className="info-icon">🔔</div>
-                            <h4>Thông báo theo thực gian thực</h4>
+                            <h4>Thông báo theo thời gian thực</h4>
                             <p>Nhận thông báo ngay trên thiết bị khi bàn đã sẵn sàng.</p>
                         </div>
                         <div className="info-card">

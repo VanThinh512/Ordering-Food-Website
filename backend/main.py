@@ -55,7 +55,10 @@ def health_check():
 @app.middleware("http")
 async def add_charset_header(request, call_next):
     response = await call_next(request)
-    response.headers["Content-Type"] = "application/json; charset=utf-8"
+    content_type = response.headers.get("content-type")
+    if content_type and content_type.lower().startswith("application/json"):
+        if "charset=" not in content_type.lower():
+            response.headers["Content-Type"] = "application/json; charset=utf-8"
     return response
 
 

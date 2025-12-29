@@ -182,9 +182,9 @@ const CartPage = () => {
 
             alert('Đặt hàng thành công! Bàn đã được đánh dấu đang sử dụng.');
 
-            // Clear cart after successful order
+            // Clear cart after successful order and reset local selections
             await clearCart();
-            await cancelReservation().catch(() => clearReservation());
+            clearReservation();
             clearSelectedTable();
 
             // Navigate to orders page
