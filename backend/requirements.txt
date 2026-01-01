@@ -26,3 +26,7 @@ sqlmodel
 google-auth==2.27.0
 google-auth-oauthlib==1.2.0
 google-auth-httplib2==0.2.0
+
+# Two-Factor Authentication (2FA)
+pyotp==2.9.0
+qrcode[pil]==7.4.2

@@ -1778,6 +1778,32 @@
     flex-shrink: 0;
 }
 
+/* Two-Factor Authentication Styles */
+.two-fa-verification {
+    text-align: center;
+}
+
+.two-fa-header {
+    margin-bottom: 2rem;
+}
+
+.two-fa-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.two-fa-header h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.two-fa-header p {
+    color: rgba(226, 232, 240, 0.7);
+    font-size: 0.95rem;
+}
+
 .auth-footer {
     margin-top: 1.75rem;
     text-align: center;

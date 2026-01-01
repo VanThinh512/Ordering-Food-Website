@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { formatPhone, isValidEmail, isValidPhone } from '../utils/helpers';
+import TwoFactorAuth from '../components/common/TwoFactorAuth';
 
 const roleBadges = {
     admin: { label: 'Quản trị viên', color: '#ff9a62' },
@@ -450,6 +451,9 @@ const ProfilePage = () => {
                                 </div>
                             </form>
                         </section>
+
+                        {/* Two-Factor Authentication Section */}
+                        <TwoFactorAuth />
                     </div>
                 </div>
             </div>

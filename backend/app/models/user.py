@@ -52,6 +52,14 @@ class User(SQLModel, table=True):
         max_length=500
     )
     
+    # Two-Factor Authentication (2FA)
+    totp_secret: Optional[str] = Field(
+        default=None,
+        sa_column=Column("totp_secret", Unicode(32), nullable=True),
+        max_length=32
+    )
+    is_2fa_enabled: bool = Field(default=False)
+    
     role: UserRole = Field(default=UserRole.STUDENT)
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)
