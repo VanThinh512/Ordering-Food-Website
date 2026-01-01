@@ -35,6 +35,23 @@ class User(SQLModel, table=True):
         max_length=20
     )
     
+    # Google OAuth
+    google_id: Optional[str] = Field(
+        default=None,
+        sa_column=Column("google_id", Unicode(255), nullable=True, unique=True, index=True),
+        max_length=255
+    )
+    google_email: Optional[str] = Field(
+        default=None,
+        sa_column=Column("google_email", Unicode(255), nullable=True),
+        max_length=255
+    )
+    google_picture: Optional[str] = Field(
+        default=None,
+        sa_column=Column("google_picture", Unicode(500), nullable=True),
+        max_length=500
+    )
+    
     role: UserRole = Field(default=UserRole.STUDENT)
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)
