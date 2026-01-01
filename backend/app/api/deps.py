@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.crud.user import user as user_crud
 from app.models.user import User
 from app.schemas.token import TokenPayload
+from app.utils.enums import UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
@@ -61,5 +62,17 @@ def get_current_active_superuser(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="The user doesn't have enough privileges"
+        )
+    return current_user
+
+
+def get_current_active_admin_or_staff(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """Get current active user that is either admin or staff."""
+    if not user_crud.is_superuser(current_user) and current_user.role != UserRole.STAFF:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges. Admin or staff role required."
         )
     return current_user

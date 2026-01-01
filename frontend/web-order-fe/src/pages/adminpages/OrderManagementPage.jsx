@@ -27,13 +27,24 @@ const OrderManagementPage = () => {
         cancelled: { label: 'Đã hủy', color: '#dc3545', icon: '✕' }
     };
 
+    const PAYMENT_METHODS = {
+        cash: { label: 'Tiền mặt', icon: '💵' },
+        online: { label: 'Chuyển khoản', icon: '🏦' }
+    };
+
+    const PAYMENT_STATUSES = {
+        unpaid: { label: 'Chưa thanh toán', color: '#ff9800' },
+        paid: { label: 'Đã thanh toán', color: '#4caf50' },
+        refunded: { label: 'Đã hoàn tiền', color: '#9e9e9e' }
+    };
+
     useEffect(() => {
         if (!isAuthenticated) {
             navigate('/login');
             return;
         }
 
-        if (user?.role !== 'admin') {
+        if (user?.role !== 'admin' && user?.role !== 'staff') {
             alert('Bạn không có quyền truy cập trang này!');
             navigate('/');
             return;
@@ -282,6 +293,37 @@ const OrderManagementPage = () => {
         }
     };
 
+    const handleMarkAsPaid = async (orderId) => {
+        if (!window.confirm(`Xác nhận đã nhận được thanh toán cho đơn hàng #${orderId}?`)) {
+            return;
+        }
+
+        try {
+            setUpdating(true);
+            const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+            
+            const response = await fetch(`http://localhost:8000/api/v1/orders/${orderId}/mark-paid`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Không thể xác nhận thanh toán');
+            }
+
+            alert('Xác nhận thanh toán thành công!');
+            await loadOrders();
+        } catch (error) {
+            console.error('Error marking as paid:', error);
+            alert(error.message || 'Không thể xác nhận thanh toán');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     const handleViewDetails = (order) => {
         console.log('👁️ Viewing order details:', order);
         setSelectedOrder(order);
@@ -434,6 +476,7 @@ const OrderManagementPage = () => {
                                     <th>Khách hàng</th>
                                     <th>Số món</th>
                                     <th>Tổng tiền</th>
+                                    <th>Thanh toán</th>
                                     <th>Trạng thái</th>
                                     <th>Thao tác</th>
                                 </tr>
@@ -488,6 +531,22 @@ const OrderManagementPage = () => {
                                                 </strong>
                                             </td>
                                             <td>
+                                                <div className="payment-info-cell">
+                                                    <div className="payment-method">
+                                                        {PAYMENT_METHODS[order.payment_method]?.icon || '💵'}{' '}
+                                                        {PAYMENT_METHODS[order.payment_method]?.label || 'Tiền mặt'}
+                                                    </div>
+                                                    <span
+                                                        className="payment-status-badge"
+                                                        style={{
+                                                            color: PAYMENT_STATUSES[order.payment_status]?.color || '#ff9800'
+                                                        }}
+                                                    >
+                                                        {PAYMENT_STATUSES[order.payment_status]?.label || 'Chưa thanh toán'}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td>
                                                 <div className="status-cell">
                                                     <select
                                                         className="status-select"
@@ -516,6 +575,16 @@ const OrderManagementPage = () => {
                                                     >
                                                         👁️
                                                     </button>
+                                                    {order.payment_method === 'online' && order.payment_status === 'unpaid' && (
+                                                        <button
+                                                            className="btn-action btn-verify-payment"
+                                                            onClick={() => handleMarkAsPaid(order.id)}
+                                                            disabled={updating}
+                                                            title="Xác nhận thanh toán"
+                                                        >
+                                                            ✓
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -567,6 +636,35 @@ const OrderManagementPage = () => {
                                                 >
                                                     {ORDER_STATUSES[selectedOrder.status]?.icon || '⏳'} {ORDER_STATUSES[selectedOrder.status]?.label || 'Chờ xác nhận'}
                                                 </span>
+                                            </div>
+                                            <div className="info-item">
+                                                <span className="info-label">Phương thức TT:</span>
+                                                <strong>
+                                                    {PAYMENT_METHODS[selectedOrder.payment_method]?.icon || '💵'}{' '}
+                                                    {PAYMENT_METHODS[selectedOrder.payment_method]?.label || 'Tiền mặt'}
+                                                </strong>
+                                            </div>
+                                            <div className="info-item">
+                                                <span className="info-label">Thanh toán:</span>
+                                                <span
+                                                    className="status-badge"
+                                                    style={{
+                                                        background: (PAYMENT_STATUSES[selectedOrder.payment_status]?.color || '#ff9800') + '20',
+                                                        color: PAYMENT_STATUSES[selectedOrder.payment_status]?.color || '#ff9800'
+                                                    }}
+                                                >
+                                                    {PAYMENT_STATUSES[selectedOrder.payment_status]?.label || 'Chưa thanh toán'}
+                                                </span>
+                                                {selectedOrder.payment_method === 'online' && selectedOrder.payment_status === 'unpaid' && (
+                                                    <button
+                                                        className="btn-verify-inline"
+                                                        onClick={() => handleMarkAsPaid(selectedOrder.id)}
+                                                        disabled={updating}
+                                                        style={{ marginLeft: '10px' }}
+                                                    >
+                                                        ✓ Xác nhận thanh toán
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
