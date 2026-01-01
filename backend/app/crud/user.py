@@ -20,6 +20,11 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         """Get user by student ID."""
         statement = select(User).where(User.student_id == student_id)
         return db.exec(statement).first()
+    
+    def get_by_google_id(self, db: Session, *, google_id: str) -> Optional[User]:
+        """Get user by Google ID."""
+        statement = select(User).where(User.google_id == google_id)
+        return db.exec(statement).first()
 
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
         """Create new user with hashed password."""
@@ -69,6 +74,58 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     def is_superuser(self, user: User) -> bool:
         """Check if user is superuser."""
         return user.is_superuser
+    
+    def get_or_create_by_google(
+        self, 
+        db: Session, 
+        *, 
+        google_id: str,
+        email: str,
+        full_name: str,
+        picture: Optional[str] = None
+    ) -> User:
+        """Get or create user by Google ID."""
+        # Try to find existing user by Google ID
+        user = self.get_by_google_id(db, google_id=google_id)
+        if user:
+            # Update picture if changed
+            if picture and user.google_picture != picture:
+                user.google_picture = picture
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            return user
+        
+        # Try to find by email (link existing account)
+        user = self.get_by_email(db, email=email)
+        if user:
+            # Link Google account to existing user
+            user.google_id = google_id
+            user.google_email = email
+            user.google_picture = picture
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            return user
+        
+        # Create new user with Google info
+        # Generate a random password since they'll login with Google
+        import secrets
+        random_password = secrets.token_urlsafe(32)
+        
+        user = User(
+            email=email,
+            hashed_password=get_password_hash(random_password),
+            full_name=full_name,
+            google_id=google_id,
+            google_email=email,
+            google_picture=picture,
+            is_active=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
 
 
 user = CRUDUser(User)

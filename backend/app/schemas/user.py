@@ -48,6 +48,9 @@ class UserInDBBase(UserBase):
     """User in database base schema."""
     id: int
     is_superuser: bool
+    google_id: Optional[str] = None
+    google_email: Optional[str] = None
+    google_picture: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

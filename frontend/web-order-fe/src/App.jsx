@@ -8,6 +8,7 @@ import ProtectedRoute from './components/common/ProtectedRoute'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import GoogleCallbackPage from './pages/GoogleCallbackPage'
 import MenuPage from './pages/MenuPage'
 import CartPage from './pages/CartPage'
 import OrdersPage from './pages/OrdersPage'
@@ -45,6 +46,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
           <Route path="/menu" element={<MenuPage />} />
           <Route
             path="/tables"
