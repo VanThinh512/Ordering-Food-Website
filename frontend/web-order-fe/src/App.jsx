@@ -115,7 +115,7 @@ function App() {
           <Route
             path="/admin/orders"
             element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole={["admin", "staff"]}>
                 <OrderManagementPage />
               </ProtectedRoute>
             }

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { formatPhone, isValidEmail, isValidPhone } from '../utils/helpers';
+import TwoFactorAuth from '../components/common/TwoFactorAuth';
 
 const roleBadges = {
     admin: { label: 'Quản trị viên', color: '#ff9a62' },
@@ -450,6 +452,63 @@ const ProfilePage = () => {
                                 </div>
                             </form>
                         </section>
+
+                        {/* Two-Factor Authentication Section */}
+                        <TwoFactorAuth />
+
+                        {/* Management Tools Section - Only for Admin and Staff */}
+                        {(user.role === 'admin' || user.role === 'staff') && (
+                            <section className="profile-maincard">
+                                <div className="profile-card-header">
+                                    <div>
+                                        <p className="eyebrow">Công cụ quản lý</p>
+                                        <h2>Truy cập nhanh</h2>
+                                    </div>
+                                </div>
+
+                                <div className="management-tools-grid">
+                                    <Link to="/admin/orders" className="management-tool-card">
+                                        <div className="tool-icon">📋</div>
+                                        <div className="tool-content">
+                                            <h4>Quản lý đơn hàng</h4>
+                                            <p>Theo dõi và xử lý đơn hàng</p>
+                                        </div>
+                                        <span className="tool-arrow">→</span>
+                                    </Link>
+
+                                    {user.role === 'admin' && (
+                                        <>
+                                            <Link to="/admin/dashboard" className="management-tool-card">
+                                                <div className="tool-icon">📊</div>
+                                                <div className="tool-content">
+                                                    <h4>Bảng điều khiển</h4>
+                                                    <p>Tổng quan hệ thống</p>
+                                                </div>
+                                                <span className="tool-arrow">→</span>
+                                            </Link>
+
+                                            <Link to="/admin/products" className="management-tool-card">
+                                                <div className="tool-icon">🍔</div>
+                                                <div className="tool-content">
+                                                    <h4>Quản lý sản phẩm</h4>
+                                                    <p>Thêm, sửa món ăn</p>
+                                                </div>
+                                                <span className="tool-arrow">→</span>
+                                            </Link>
+
+                                            <Link to="/admin/users" className="management-tool-card">
+                                                <div className="tool-icon">👥</div>
+                                                <div className="tool-content">
+                                                    <h4>Quản lý người dùng</h4>
+                                                    <p>Quản lý tài khoản</p>
+                                                </div>
+                                                <span className="tool-arrow">→</span>
+                                            </Link>
+                                        </>
+                                    )}
+                                </div>
+                            </section>
+                        )}
                     </div>
                 </div>
             </div>

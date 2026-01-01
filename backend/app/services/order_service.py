@@ -12,7 +12,7 @@ from app.crud.product import product as product_crud
 from app.models.order import Order
 from app.schemas.order import OrderCreate
 from app.services.email_service import email_service
-from app.utils.enums import OrderStatus, PaymentStatus, TableStatus, ReservationStatus
+from app.utils.enums import OrderStatus, PaymentStatus, TableStatus, ReservationStatus, PaymentMethod
 
 
 class OrderService:
@@ -390,8 +390,9 @@ class OrderService:
         
         # If completed, release table and update payment
         if new_status == OrderStatus.COMPLETED:
-            # Auto-mark as paid when completed
-            order.payment_status = PaymentStatus.PAID
+            # Auto-mark as paid when completed (for cash payments)
+            if order.payment_method == PaymentMethod.CASH:
+                order.payment_status = PaymentStatus.PAID
             order.updated_at = datetime.utcnow()
             db.add(order)
             db.commit()

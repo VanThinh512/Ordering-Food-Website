@@ -4,12 +4,15 @@ import { useCartStore } from '../stores/cartStore';
 import { useAuthStore } from '../stores/authStore';
 import { useTableStore } from '../stores/tableStore';
 import { formatPrice } from '../utils/helpers';
+import PaymentModal from '../components/common/PaymentModal';
 
 const CartPage = () => {
     const navigate = useNavigate();
     const [notes, setNotes] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [currentTable, setCurrentTable] = useState(null);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [tempOrderId, setTempOrderId] = useState(null);
 
     const {
         items,
@@ -136,6 +139,12 @@ const CartPage = () => {
             return;
         }
 
+        // Show payment modal instead of creating order directly
+        setShowPaymentModal(true);
+    };
+
+    const handleConfirmPayment = async (paymentMethod) => {
+        const table = getSelectedTable();
         setIsSubmitting(true);
 
         try {
@@ -148,6 +157,7 @@ const CartPage = () => {
             const orderData = {
                 table_id: table.id,
                 reservation_id: confirmedReservation.id,
+                payment_method: paymentMethod,
                 items: items.map(item => ({
                     product_id: item.product_id,
                     quantity: item.quantity,
@@ -180,7 +190,15 @@ const CartPage = () => {
 
             console.log('✅ Order created successfully:', responseData);
 
-            alert('Đặt hàng thành công! Bàn đã được đánh dấu đang sử dụng.');
+            // Close payment modal
+            setShowPaymentModal(false);
+
+            // For online payment, show waiting message
+            if (paymentMethod === 'online') {
+                alert('Đơn hàng đã được tạo!\n\nVui lòng hoàn tất chuyển khoản theo QR code.\nTrạng thái thanh toán sẽ được cập nhật sau khi admin xác nhận.');
+            } else {
+                alert('Đặt hàng thành công! Bạn sẽ thanh toán khi nhận món.');
+            }
 
             // Clear cart after successful order and reset local selections
             await clearCart();
@@ -476,6 +494,15 @@ const CartPage = () => {
                     </div>
                 )}
             </div>
+
+            {/* Payment Modal */}
+            <PaymentModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                orderAmount={getTotal()}
+                orderId={tempOrderId}
+                onConfirmPayment={handleConfirmPayment}
+            />
         </div>
     );
 };

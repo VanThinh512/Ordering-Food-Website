@@ -4,7 +4,7 @@ from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy import Column, Unicode
 from sqlmodel import SQLModel, Field, Relationship
 
-from app.utils.enums import OrderStatus, PaymentStatus
+from app.utils.enums import OrderStatus, PaymentStatus, PaymentMethod
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -27,6 +27,15 @@ class Order(SQLModel, table=True):
     total_amount: float = Field(ge=0)
     status: OrderStatus = Field(default=OrderStatus.PENDING, index=True)
     payment_status: PaymentStatus = Field(default=PaymentStatus.UNPAID)
+    payment_method: PaymentMethod = Field(default=PaymentMethod.CASH)
+    
+    # Bank transfer info (for online payment)
+    bank_transfer_code: Optional[str] = Field(
+        default=None,
+        sa_column=Column("bank_transfer_code", Unicode(100), nullable=True),
+        max_length=100
+    )
+    bank_transfer_verified: bool = Field(default=False)
     
     # Additional info
     notes: Optional[str] = Field(

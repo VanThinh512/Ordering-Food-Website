@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field
 
-from app.utils.enums import OrderStatus, PaymentStatus
+from app.utils.enums import OrderStatus, PaymentStatus, PaymentMethod
 from app.schemas.reservation import ReservationSummary
 
 
@@ -79,12 +79,16 @@ class OrderBase(BaseModel):
 class OrderCreate(OrderBase):
     """Order creation schema."""
     reservation_id: Optional[int] = None
+    payment_method: Optional[PaymentMethod] = Field(default=PaymentMethod.CASH)
 
 
 class OrderUpdate(BaseModel):
     """Order update schema."""
     status: Optional[OrderStatus] = None
     payment_status: Optional[PaymentStatus] = None
+    payment_method: Optional[PaymentMethod] = None
+    bank_transfer_code: Optional[str] = None
+    bank_transfer_verified: Optional[bool] = None
     notes: Optional[str] = Field(None, max_length=1000)
 
 
@@ -97,6 +101,9 @@ class OrderInDBBase(OrderBase):
     """Order in database base schema."""
     id: int
     user_id: int
+    payment_method: PaymentMethod
+    bank_transfer_code: Optional[str] = None
+    bank_transfer_verified: bool = False
     total_amount: float
     status: OrderStatus
     payment_status: PaymentStatus

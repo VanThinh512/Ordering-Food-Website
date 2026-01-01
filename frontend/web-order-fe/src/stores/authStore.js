@@ -21,7 +21,17 @@ export const useAuthStore = create((set, get) => ({
                 },
             });
 
-            const { access_token } = response.data;
+            const { access_token, requires_2fa, user_id } = response.data;
+            
+            // Check if 2FA is required
+            if (requires_2fa) {
+                return {
+                    success: true,
+                    requires2FA: true,
+                    userId: user_id
+                };
+            }
+
             localStorage.setItem('access_token', access_token);
 
             // Fetch user info

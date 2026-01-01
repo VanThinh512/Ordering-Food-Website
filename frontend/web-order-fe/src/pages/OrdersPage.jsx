@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useOrderStore } from '../stores/orderStore';
 import { formatPrice, formatDate } from '../utils/helpers';
 import { ORDER_STATUS_LABELS } from '../types';
+import PaymentModal from '../components/common/PaymentModal';
 
 const OrdersPage = () => {
     const { orders, fetchMyOrders, cancelOrder } = useOrderStore();
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
 
     useEffect(() => {
         loadOrders();
@@ -223,6 +226,66 @@ const OrdersPage = () => {
         }
     };
 
+    const handleRetryPayment = (order) => {
+        setSelectedOrder(order);
+        setShowPaymentModal(true);
+    };
+
+    const handleConfirmRetryPayment = async (paymentMethod) => {
+        if (!selectedOrder) return;
+
+        try {
+            const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+
+            // If user chooses cash, update payment method
+            if (paymentMethod === 'cash') {
+                const response = await fetch(`http://localhost:8000/api/v1/orders/${selectedOrder.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        payment_method: paymentMethod
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Đã chuyển sang thanh toán tiền mặt');
+                    setShowPaymentModal(false);
+                    await loadOrders();
+                }
+            } else {
+                // For online payment, just show QR and instruction
+                setShowPaymentModal(false);
+                alert('Vui lòng hoàn tất chuyển khoản theo QR code vừa hiển thị.\n\nTrạng thái thanh toán sẽ được cập nhật sau khi admin xác nhận.');
+            }
+        } catch (error) {
+            console.error('Retry payment error:', error);
+            alert('Có lỗi xảy ra. Vui lòng thử lại.');
+        }
+    };
+
+    const getPaymentStatusLabel = (paymentStatus) => {
+        const labels = {
+            unpaid: 'Chưa thanh toán',
+            paid: 'Đã thanh toán',
+            refunded: 'Đã hoàn tiền'
+        };
+        return labels[paymentStatus] || paymentStatus;
+    };
+
+    const getPaymentStatusClass = (paymentStatus) => {
+        const classes = {
+            unpaid: 'payment-unpaid',
+            paid: 'payment-paid',
+            refunded: 'payment-refunded'
+        };
+        return classes[paymentStatus] || '';
+    };
+
+    // --- Đã xóa các dấu ngoặc thừa ở đây ---
+
     if (loading) {
         return (
             <div className="loading-container">
@@ -366,6 +429,12 @@ const OrdersPage = () => {
                                     <strong>{order.items.length}</strong>
                                 </div>
                                 <div className="meta-pill">
+                                    <span className="meta-label">Thanh toán</span>
+                                    <strong className={getPaymentStatusClass(order.payment_status)}>
+                                        {getPaymentStatusLabel(order.payment_status)}
+                                    </strong>
+                                </div>
+                                <div className="meta-pill">
                                     <span className="meta-label">Tổng cộng</span>
                                     <strong>{formatPrice(calculateOrderTotal(order))}</strong>
                                 </div>
@@ -395,16 +464,38 @@ const OrdersPage = () => {
                                     <strong>{formatPrice(calculateOrderTotal(order))}</strong>
                                 </div>
 
-                                {order.status === 'pending' && (
-                                    <button className="btn-cancel-order" onClick={() => handleCancelOrder(order.id)}>
-                                        Hủy đơn hàng
-                                    </button>
-                                )}
+                                <div className="order-actions">
+                                    {order.status === 'pending' && (
+                                        <button className="btn-cancel-order" onClick={() => handleCancelOrder(order.id)}>
+                                            Hủy đơn hàng
+                                        </button>
+                                    )}
+
+                                    {order.payment_status === 'unpaid' && order.payment_method === 'online' && order.status !== 'cancelled' && (
+                                        <button className="btn-retry-payment" onClick={() => handleRetryPayment(order)}>
+                                            💳 Thanh toán lại
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
+
+            {/* Payment Modal for retry */}
+            {selectedOrder && (
+                <PaymentModal
+                    isOpen={showPaymentModal}
+                    onClose={() => {
+                        setShowPaymentModal(false);
+                        setSelectedOrder(null);
+                    }}
+                    orderAmount={calculateOrderTotal(selectedOrder)}
+                    orderId={selectedOrder.id}
+                    onConfirmPayment={handleConfirmRetryPayment}
+                />
+            )}
         </div>
     );
 };
