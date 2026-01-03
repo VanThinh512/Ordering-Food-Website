@@ -325,149 +325,76 @@ const StatisticsPage = () => {
                     </div>
                 </section>
 
-                <div className="dashboard-panels">
-                    {/* Orders Statistics */}
-                    <section className="panel">
-                        <div className="panel-header">
-                            <h3>🧾 Đơn hàng theo trạng thái</h3>
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <select 
-                                    value={selectedYear} 
-                                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                                    className="filter-select"
-                                >
-                                    {years.map(year => (
-                                        <option key={year} value={year}>{year}</option>
-                                    ))}
-                                </select>
-                                <select 
-                                    value={selectedMonth} 
-                                    onChange={(e) => setSelectedMonth(e.target.value)}
-                                    className="filter-select"
-                                >
-                                    <option value="all">Cả năm</option>
-                                    {MONTH_NAMES.map((name, idx) => (
-                                        <option key={idx + 1} value={idx + 1}>{name}</option>
-                                    ))}
-                                </select>
+                {/* Orders Statistics */}
+                <section className="panel full-width">
+                    <div className="panel-header">
+                        <h3>🧾 Đơn hàng theo trạng thái</h3>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <select 
+                                value={selectedYear} 
+                                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                                className="filter-select"
+                            >
+                                {years.map(year => (
+                                    <option key={year} value={year}>{year}</option>
+                                ))}
+                            </select>
+                            <select 
+                                value={selectedMonth} 
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                className="filter-select"
+                            >
+                                <option value="all">Cả năm</option>
+                                {MONTH_NAMES.map((name, idx) => (
+                                    <option key={idx + 1} value={idx + 1}>{name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="chart-container">
+                        {ordersData && (
+                            <div className="chart-summary">
+                                <p>Tổng: <strong>{ordersData.total}</strong> đơn hàng</p>
                             </div>
-                        </div>
-                        <div className="chart-container">
-                            {ordersData && (
-                                <div className="chart-summary">
-                                    <p>Tổng: <strong>{ordersData.total}</strong> đơn hàng</p>
-                                </div>
-                            )}
-                            <ResponsiveContainer width="100%" height={350}>
-                                <PieChart>
-                                    <Pie
-                                        data={getOrdersChartData()}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        outerRadius={100}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {getOrdersChartData().map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip 
-                                        contentStyle={{
-                                            backgroundColor: 'rgba(20, 20, 40, 0.95)',
-                                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                                            borderRadius: '8px'
-                                        }}
-                                        itemStyle={{ color: '#fff' }}
-                                        labelStyle={{ color: '#fff' }}
-                                    />
-                                    <Legend 
-                                        verticalAlign="bottom" 
-                                        height={36}
-                                        wrapperStyle={{ 
-                                            paddingTop: '20px',
-                                            fontSize: '14px',
-                                            color: 'rgba(226, 232, 240, 0.85)'
-                                        }}
-                                        formatter={(value, entry) => `${value}: ${entry.payload.value}`}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </section>
-
-                    {/* Reservations by Status */}
-                    <section className="panel">
-                        <div className="panel-header">
-                            <h3>🪑 Đặt bàn theo trạng thái</h3>
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <select 
-                                    value={selectedYear} 
-                                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                                    className="filter-select"
+                        )}
+                        <ResponsiveContainer width="100%" height={350}>
+                            <PieChart>
+                                <Pie
+                                    data={getOrdersChartData()}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius={120}
+                                    fill="#8884d8"
+                                    dataKey="value"
                                 >
-                                    {years.map(year => (
-                                        <option key={year} value={year}>{year}</option>
+                                    {getOrdersChartData().map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
-                                </select>
-                                <select 
-                                    value={selectedMonth} 
-                                    onChange={(e) => setSelectedMonth(e.target.value)}
-                                    className="filter-select"
-                                >
-                                    <option value="all">Cả năm</option>
-                                    {MONTH_NAMES.map((name, idx) => (
-                                        <option key={idx + 1} value={idx + 1}>{name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="chart-container">
-                            {reservationsData && (
-                                <div className="chart-summary">
-                                    <p>Tổng: <strong>{reservationsData.total}</strong> lượt đặt</p>
-                                </div>
-                            )}
-                            <ResponsiveContainer width="100%" height={350}>
-                                <PieChart>
-                                    <Pie
-                                        data={getReservationsByStatus()}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        outerRadius={100}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {getReservationsByStatus().map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip 
-                                        contentStyle={{
-                                            backgroundColor: 'rgba(20, 20, 40, 0.95)',
-                                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                                            borderRadius: '8px'
-                                        }}
-                                        itemStyle={{ color: '#fff' }}
-                                        labelStyle={{ color: '#fff' }}
-                                    />
-                                    <Legend 
-                                        verticalAlign="bottom" 
-                                        height={36}
-                                        wrapperStyle={{ 
-                                            paddingTop: '20px',
-                                            fontSize: '14px',
-                                            color: 'rgba(226, 232, 240, 0.85)'
-                                        }}
-                                        formatter={(value, entry) => `${value}: ${entry.payload.value}`}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </section>
-                </div>
+                                </Pie>
+                                <Tooltip 
+                                    contentStyle={{
+                                        backgroundColor: 'rgba(20, 20, 40, 0.95)',
+                                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                                        borderRadius: '8px'
+                                    }}
+                                    itemStyle={{ color: '#fff' }}
+                                    labelStyle={{ color: '#fff' }}
+                                />
+                                <Legend 
+                                    verticalAlign="bottom" 
+                                    height={36}
+                                    wrapperStyle={{ 
+                                        paddingTop: '20px',
+                                        fontSize: '14px',
+                                        color: 'rgba(226, 232, 240, 0.85)'
+                                    }}
+                                    formatter={(value, entry) => `${value}: ${entry.payload.value}`}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </section>
 
                 {/* Reservations Timeline Chart */}
                 <section className="panel full-width">

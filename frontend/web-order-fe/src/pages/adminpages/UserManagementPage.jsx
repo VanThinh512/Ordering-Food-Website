@@ -48,6 +48,19 @@ const UserManagementPage = () => {
         loadUsers();
     }, [isAuthenticated, user]);
 
+    // Disable body scroll when modal is open
+    useEffect(() => {
+        if (showModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [showModal]);
+
     const loadUsers = async () => {
         try {
             setLoading(true);
@@ -545,8 +558,8 @@ const UserManagementPage = () => {
                                 <button className="modal-close" onClick={closeModal}>✕</button>
                             </div>
 
-                            <form onSubmit={handleSubmit}>
-                                <div className="modal-body">
+                            <div className="modal-body">
+                                <form onSubmit={handleSubmit}>
                                     <div className="form-grid">
                                         {/* Email */}
                                         <div className="form-group">
@@ -673,27 +686,27 @@ const UserManagementPage = () => {
                                             )}
                                         </div>
                                     )}
-                                </div>
 
-                                <div className="modal-footer">
-                                    <button
-                                        type="button"
-                                        className="btn-cancel"
-                                        onClick={closeModal}
-                                    >
-                                        {modalMode === 'view' ? 'Đóng' : 'Hủy'}
-                                    </button>
-                                    {modalMode !== 'view' && (
+                                    <div className="modal-footer">
                                         <button
-                                            type="submit"
-                                            className="btn-submit"
-                                            disabled={submitting}
+                                            type="button"
+                                            className="btn-cancel"
+                                            onClick={closeModal}
                                         >
-                                            {submitting ? 'Đang xử lý...' : (modalMode === 'add' ? 'Thêm mới' : 'Cập nhật')}
+                                            {modalMode === 'view' ? 'Đóng' : 'Hủy'}
                                         </button>
-                                    )}
-                                </div>
-                            </form>
+                                        {modalMode !== 'view' && (
+                                            <button
+                                                type="submit"
+                                                className="btn-submit"
+                                                disabled={submitting}
+                                            >
+                                                {submitting ? 'Đang xử lý...' : (modalMode === 'add' ? 'Thêm mới' : 'Cập nhật')}
+                                            </button>
+                                        )}
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 )}
