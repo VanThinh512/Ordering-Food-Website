@@ -42,10 +42,24 @@ const DashBoard = () => {
 
                 if (!isMounted) return;
 
-                setUsers(usersRes || []);
-                setProducts(productsRes || []);
-                setCategories(categoriesRes || []);
-                setOrders(ordersRes || []);
+                // Handle response data - ensure we have arrays
+                const usersArray = Array.isArray(usersRes) ? usersRes : (usersRes?.items || usersRes?.data || []);
+                const productsArray = Array.isArray(productsRes) ? productsRes : (productsRes?.items || productsRes?.data || []);
+                const categoriesArray = Array.isArray(categoriesRes) ? categoriesRes : (categoriesRes?.items || categoriesRes?.data || []);
+                const ordersArray = Array.isArray(ordersRes) ? ordersRes : (ordersRes?.items || ordersRes?.data || []);
+
+                setUsers(usersArray);
+                setProducts(productsArray);
+                setCategories(categoriesArray);
+                setOrders(ordersArray);
+
+                console.log('Dashboard data loaded:', {
+                    users: usersArray.length,
+                    products: productsArray.length,
+                    categories: categoriesArray.length,
+                    orders: ordersArray.length,
+                    tables: availableTables.length
+                });
             } catch (err) {
                 console.error('Error loading dashboard data:', err);
                 if (isMounted) {
@@ -64,13 +78,47 @@ const DashBoard = () => {
         };
     }, [fetchAvailableTables]);
 
-    const stats = useMemo(() => ([
-        { label: 'Tổng số bàn', value: availableTables.length, trend: '+3% so với hôm qua', accent: 'accent-green' },
-        { label: 'Người dùng hoạt động', value: users.filter(u => u.is_active).length, trend: '+12%', accent: 'accent-orange' },
-        { label: 'Sản phẩm đang bán', value: products.filter(p => p.is_available).length, trend: '+5%', accent: 'accent-purple' },
-        { label: 'Danh mục món', value: categories.length, trend: 'ổn định', accent: 'accent-cyan' },
-        { label: 'Đơn hàng tổng', value: orders.length, trend: '+18%', accent: 'accent-red' },
-    ]), [availableTables.length, users, products, categories.length, orders.length]);
+    const stats = useMemo(() => {
+        const activeUsers = users.filter(u => u.is_active === true || u.is_active === 1).length;
+        const availableProducts = products.filter(p => p.is_available === true || p.is_available === 1).length;
+        const totalTables = availableTables.length;
+        const totalCategories = categories.length;
+        const totalOrders = orders.length;
+        const completedOrders = orders.filter(o => o.status?.toLowerCase() === 'completed').length;
+
+        return [
+            { 
+                label: 'Tổng số bàn', 
+                value: totalTables, 
+                trend: `${availableTables.filter(t => t.status === 'available').length} bàn trống`, 
+                accent: 'accent-green' 
+            },
+            { 
+                label: 'Người dùng hoạt động', 
+                value: activeUsers, 
+                trend: `${users.length} tổng người dùng`, 
+                accent: 'accent-orange' 
+            },
+            { 
+                label: 'Sản phẩm đang bán', 
+                value: availableProducts, 
+                trend: `${products.length} tổng sản phẩm`, 
+                accent: 'accent-purple' 
+            },
+            { 
+                label: 'Danh mục món', 
+                value: totalCategories, 
+                trend: 'Đang hoạt động', 
+                accent: 'accent-cyan' 
+            },
+            { 
+                label: 'Đơn hàng hoàn thành', 
+                value: completedOrders, 
+                trend: `${totalOrders} tổng đơn`, 
+                accent: 'accent-red' 
+            },
+        ];
+    }, [availableTables, users, products, categories, orders]);
 
     const recentOrders = useMemo(() => {
         if (!orders.length) return [];
@@ -95,8 +143,8 @@ const DashBoard = () => {
     ];
 
     const sidebarLinks = [
-        { icon: '📊', label: 'Tổng quan', anchor: '#dashboard-overview' },
-        { icon: '📈', label: 'Thống kê', anchor: '#dashboard-stats' },
+        { icon: '📊', label: 'Tổng quan', path: '/admin/dashboard' },
+        { icon: '📈', label: 'Thống kê', path: '/admin/statistics' },
         { icon: '🧾', label: 'Đơn hàng', path: '/admin/orders' },
         { icon: '🍔', label: 'Sản phẩm', path: '/admin/products' },
         { icon: '🏷️', label: 'Danh mục', path: '/admin/categories' },

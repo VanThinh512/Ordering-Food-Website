@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     orders,
     tables,
     reservations,
+    statistics,
 )
 
 api_router = APIRouter()
@@ -22,3 +23,4 @@ api_router.include_router(carts.router, prefix="/carts", tags=["carts"])
 api_router.include_router(orders.router, prefix="/orders", tags=["orders"])
 api_router.include_router(tables.router, prefix="/tables", tags=["tables"])
 api_router.include_router(reservations.router, prefix="/reservations", tags=["reservations"])
+api_router.include_router(statistics.router, prefix="/statistics", tags=["statistics"])

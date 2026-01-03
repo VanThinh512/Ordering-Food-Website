@@ -20,6 +20,7 @@ import CategoryManagementPage from './pages/adminpages/CategoryManagementPage'
 import OrderManagementPage from './pages/adminpages/OrderManagementPage'
 import UserManagementPage from './pages/adminpages/UserManagementPage'
 import DashBoard from './pages/adminpages/DashBoard'
+import StatisticsPage from './pages/adminpages/StatisticsPage'
 import './App.css'
 import './style.css'
 
@@ -93,6 +94,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <DashBoard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/statistics"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <StatisticsPage />
               </ProtectedRoute>
             }
           />
