@@ -1,88 +1,88 @@
-# Payment System Documentation
+# Tài Liệu Hệ Thống Thanh Toán
 
-## Overview
-The Food Ordering Website now supports two payment methods:
-1. **Cash (COD)** - Payment upon delivery
-2. **Online Banking** - Bank transfer via VietQR
+## Tổng Quan
+Website Đặt Món Ăn hiện hỗ trợ hai phương thức thanh toán:
+1. **Tiền mặt (COD)** - Thanh toán khi nhận hàng
+2. **Chuyển khoản ngân hàng** - Chuyển khoản qua VietQR
 
-## Features
+## Tính Năng
 
-### Payment Method Selection
-When users click "Đặt hàng ngay" in CartPage, a payment modal appears with two options:
-- **💵 Tiền mặt (Cash)**: Pay when receiving the order
-- **🏦 Chuyển khoản ngân hàng (Online Banking)**: Pay via bank transfer
+### Lựa Chọn Phương Thức Thanh Toán
+Khi người dùng nhấn "Đặt hàng ngay" trong CartPage, một modal thanh toán xuất hiện với hai tùy chọn:
+- **💵 Tiền mặt (Cash)**: Thanh toán khi nhận đơn hàng
+- **🏦 Chuyển khoản ngân hàng (Online Banking)**: Thanh toán qua chuyển khoản
 
-### Cash Payment Flow
-1. User selects "Tiền mặt" and confirms
-2. Order is created with `payment_status = "unpaid"` and `payment_method = "cash"`
-3. Order remains unpaid until completion
-4. When order status changes to `COMPLETED`, payment status automatically becomes `"paid"`
+### Quy Trình Thanh Toán Tiền Mặt
+1. Người dùng chọn "Tiền mặt" và xác nhận
+2. Đơn hàng được tạo với `payment_status = "unpaid"` và `payment_method = "cash"`
+3. Đơn hàng vẫn chưa thanh toán cho đến khi hoàn tất
+4. Khi trạng thái đơn hàng chuyển sang `COMPLETED`, trạng thái thanh toán tự động trở thành `"paid"`
 
-### Online Banking Payment Flow
-1. User selects "Chuyển khoản ngân hàng"
-2. System displays VietQR code with:
-   - Bank: MB Bank (MBBank - 970422)
-   - Account Number: 7053765633
-   - Account Name: PHAM TAN
-   - Amount: Order total
-   - Content: FOODORDER {order_id}
-3. User scans QR code with banking app
-4. Banking app auto-fills transfer details
-5. User completes transfer
-6. Order created with `payment_status = "unpaid"` and `payment_method = "online"`
-7. Admin verifies payment and marks as paid
+### Quy Trình Thanh Toán Chuyển Khoản
+1. Người dùng chọn "Chuyển khoản ngân hàng"
+2. Hệ thống hiển thị mã VietQR với:
+   - Ngân hàng: MB Bank (MBBank - 970422)
+   - Số tài khoản: 7053765633
+   - Tên tài khoản: PHAM TAN
+   - Số tiền: Tổng đơn hàng
+   - Nội dung: FOODORDER {order_id}
+3. Người dùng quét mã QR bằng ứng dụng ngân hàng
+4. Ứng dụng ngân hàng tự động điền thông tin chuyển khoản
+5. Người dùng hoàn tất chuyển khoản
+6. Đơn hàng được tạo với `payment_status = "unpaid"` và `payment_method = "online"`
+7. Admin xác minh thanh toán và đánh dấu đã thanh toán
 
-### Payment Retry
-For unpaid online orders:
-- "💳 Thanh toán lại" button appears in OrdersPage
-- Users can:
-  - View QR code again to complete payment
-  - Switch to cash payment method
+### Thanh Toán Lại
+Đối với đơn hàng chuyển khoản chưa thanh toán:
+- Nút "💳 Thanh toán lại" xuất hiện trong OrdersPage
+- Người dùng có thể:
+  - Xem lại mã QR để hoàn tất thanh toán
+  - Chuyển sang phương thức thanh toán tiền mặt
 
-## Database Schema
+## Cấu Trúc Database
 
-### New Fields in `orders` table:
+### Các trường mới trong bảng `orders`:
 ```sql
-payment_method NVARCHAR(20) NOT NULL DEFAULT 'cash'  -- 'cash' or 'online'
-bank_transfer_code NVARCHAR(100) NULL                 -- Transfer reference code
-bank_transfer_verified BIT NOT NULL DEFAULT 0         -- Manual verification flag
+payment_method NVARCHAR(20) NOT NULL DEFAULT 'cash'  -- 'cash' hoặc 'online'
+bank_transfer_code NVARCHAR(100) NULL                 -- Mã tham chiếu chuyển khoản
+bank_transfer_verified BIT NOT NULL DEFAULT 0         -- Cờ xác minh thủ công
 ```
 
 ### Indexes:
-- `idx_orders_payment_method` on `payment_method`
-- `idx_orders_bank_transfer_code` on `bank_transfer_code`
+- `idx_orders_payment_method` trên `payment_method`
+- `idx_orders_bank_transfer_code` trên `bank_transfer_code`
 
 ## Backend API
 
-### Order Creation
+### Tạo Đơn Hàng
 **POST** `/api/v1/orders/`
 ```json
 {
   "table_id": 1,
   "reservation_id": 5,
-  "payment_method": "cash",  // or "online"
-  "notes": "Optional notes"
+  "payment_method": "cash",  // hoặc "online"
+  "notes": "Ghi chú tùy chọn"
 }
 ```
 
-### Verify Payment
+### Xác Minh Thanh Toán
 **POST** `/api/v1/orders/{order_id}/verify-payment`
 ```json
 {
   "transfer_code": "REF123456789"
 }
 ```
-- Marks order as paid
-- Updates `bank_transfer_verified = true`
+- Đánh dấu đơn hàng đã thanh toán
+- Cập nhật `bank_transfer_verified = true`
 
-### Mark as Paid (Admin Only)
+### Đánh Dấu Đã Thanh Toán (Chỉ Admin)
 **POST** `/api/v1/orders/{order_id}/mark-paid`
-- Admin endpoint to manually mark order as paid
+- Endpoint cho admin để đánh dấu thủ công đơn hàng đã thanh toán
 
 ## Frontend Components
 
 ### PaymentModal.jsx
-- Path: `frontend/web-order-fe/src/components/common/PaymentModal.jsx`
+- Đường dẫn: `frontend/web-order-fe/src/components/common/PaymentModal.jsx`
 - Props:
   - `isOpen`: boolean
   - `onClose`: function
@@ -90,7 +90,7 @@ bank_transfer_verified BIT NOT NULL DEFAULT 0         -- Manual verification fla
   - `orderId`: number
   - `onConfirmPayment`: function(paymentMethod)
 
-### Integration in CartPage
+### Tích Hợp trong CartPage
 ```jsx
 import PaymentModal from '../components/common/PaymentModal';
 
@@ -102,14 +102,14 @@ const handleCheckout = () => {
 };
 
 const handleConfirmPayment = async (paymentMethod) => {
-  // Create order with payment_method
-  // Navigate to orders page
+  // Tạo đơn hàng với payment_method
+  // Chuyển đến trang orders
 };
 ```
 
-### Integration in OrdersPage
+### Tích Hợp trong OrdersPage
 ```jsx
-// Show payment retry button for unpaid online orders
+// Hiển thị nút thanh toán lại cho đơn hàng chuyển khoản chưa thanh toán
 {order.payment_status === 'unpaid' && 
  order.payment_method === 'online' && 
  order.status !== 'cancelled' && (
@@ -119,10 +119,10 @@ const handleConfirmPayment = async (paymentMethod) => {
 )}
 ```
 
-## VietQR Integration
+## Tích Hợp VietQR
 
-### QR Code Generation
-URL format:
+### Tạo Mã QR
+Định dạng URL:
 ```
 https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-compact2.png
   ?amount={AMOUNT}
@@ -130,7 +130,7 @@ https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-compact2.png
   &accountName={ACCOUNT_NAME}
 ```
 
-Example:
+Ví dụ:
 ```
 https://img.vietqr.io/image/970422-7053765633-compact2.png
   ?amount=150000
@@ -138,34 +138,34 @@ https://img.vietqr.io/image/970422-7053765633-compact2.png
   &accountName=PHAM%20TAN
 ```
 
-### Bank Information
-- Bank: MB Bank (MBBank)
-- Bank ID: 970422
-- Account Number: 7053765633
-- Account Name: PHAM TAN
+### Thông Tin Ngân Hàng
+- Ngân hàng: MB Bank (MBBank)
+- Mã ngân hàng: 970422
+- Số tài khoản: 7053765633
+- Tên tài khoản: PHAM TAN
 
-## Payment Status Logic
+## Logic Trạng Thái Thanh Toán
 
-### Status Transitions
+### Chuyển Đổi Trạng Thái
 
-#### Cash Payment:
+#### Thanh Toán Tiền Mặt:
 ```
-Order Created → payment_status: "unpaid"
+Tạo Đơn Hàng → payment_status: "unpaid"
          ↓
-Order Completed → payment_status: "paid" (automatic)
+Đơn Hàng Hoàn Tất → payment_status: "paid" (tự động)
 ```
 
-#### Online Payment:
+#### Thanh Toán Chuyển Khoản:
 ```
-Order Created → payment_status: "unpaid"
+Tạo Đơn Hàng → payment_status: "unpaid"
          ↓
-Transfer Completed → Admin verifies
+Hoàn Tất Chuyển Khoản → Admin xác minh
          ↓
-Admin confirms → payment_status: "paid"
+Admin xác nhận → payment_status: "paid"
 ```
 
-### Auto-Payment on Completion
-In `order_service.py`:
+### Tự Động Thanh Toán Khi Hoàn Tất
+Trong `order_service.py`:
 ```python
 if new_status == OrderStatus.COMPLETED:
     if order.payment_method == PaymentMethod.CASH:
@@ -174,73 +174,73 @@ if new_status == OrderStatus.COMPLETED:
 
 ## CSS Styling
 
-### Payment Status Badges
+### Nhãn Trạng Thái Thanh Toán
 ```css
 .payment-unpaid {
-    color: #ff9a62 !important;  /* Orange */
+    color: #ff9a62 !important;  /* Cam */
 }
 
 .payment-paid {
-    color: #10b981 !important;  /* Green */
+    color: #10b981 !important;  /* Xanh lá */
 }
 
 .payment-refunded {
-    color: #94a3b8 !important;  /* Gray */
+    color: #94a3b8 !important;  /* Xám */
 }
 ```
 
-### Payment Modal
-- Dark theme with glass morphism
-- Responsive design
-- QR code displayed on white background for scanning
-- Smooth animations
+### Modal Thanh Toán
+- Giao diện tối với hiệu ứng kính mờ (glass morphism)
+- Thiết kế responsive
+- Mã QR hiển thị trên nền trắng để dễ quét
+- Hiệu ứng chuyển động mượt mà
 
-## Testing Checklist
+## Danh Sách Kiểm Tra
 
-### Cash Payment:
-- [ ] Select cash payment method
-- [ ] Order created with payment_method = "cash"
-- [ ] Payment status shows "Chưa thanh toán"
-- [ ] When order completed, status becomes "Đã thanh toán"
+### Thanh Toán Tiền Mặt:
+- [ ] Chọn phương thức thanh toán tiền mặt
+- [ ] Đơn hàng được tạo với payment_method = "cash"
+- [ ] Trạng thái thanh toán hiển thị "Chưa thanh toán"
+- [ ] Khi đơn hàng hoàn tất, trạng thái trở thành "Đã thanh toán"
 
-### Online Banking:
-- [ ] Select online banking method
-- [ ] QR code displays correctly
-- [ ] Order details shown (amount, account, reference)
-- [ ] Order created with payment_method = "online"
-- [ ] Payment retry button appears for unpaid orders
-- [ ] Admin can verify payment
+### Chuyển Khoản Ngân Hàng:
+- [ ] Chọn phương thức chuyển khoản
+- [ ] Mã QR hiển thị chính xác
+- [ ] Chi tiết đơn hàng được hiển thị (số tiền, tài khoản, mã tham chiếu)
+- [ ] Đơn hàng được tạo với payment_method = "online"
+- [ ] Nút thanh toán lại xuất hiện cho đơn hàng chưa thanh toán
+- [ ] Admin có thể xác minh thanh toán
 
-### Payment Retry:
-- [ ] Unpaid online orders show retry button
-- [ ] Can switch from online to cash
-- [ ] Can view QR code again
-- [ ] Modal closes after action
+### Thanh Toán Lại:
+- [ ] Đơn hàng chuyển khoản chưa thanh toán hiển thị nút thanh toán lại
+- [ ] Có thể chuyển từ chuyển khoản sang tiền mặt
+- [ ] Có thể xem lại mã QR
+- [ ] Modal đóng sau khi thực hiện hành động
 
-## Future Enhancements
+## Cải Tiến Trong Tương Lai
 
-1. **Automatic Payment Verification**
-   - Webhook integration with bank API
-   - Real-time payment status updates
+1. **Xác Minh Thanh Toán Tự Động**
+   - Tích hợp webhook với API ngân hàng
+   - Cập nhật trạng thái thanh toán theo thời gian thực
 
-2. **Multiple Payment Methods**
-   - Credit/Debit cards
-   - E-wallets (MoMo, ZaloPay, VNPay)
+2. **Nhiều Phương Thức Thanh Toán**
+   - Thẻ tín dụng/ghi nợ
+   - Ví điện tử (MoMo, ZaloPay, VNPay)
    - PayPal
 
-3. **Payment History**
-   - Detailed transaction logs
-   - Receipt generation
-   - Export to PDF
+3. **Lịch Sử Thanh Toán**
+   - Nhật ký giao dịch chi tiết
+   - Tạo hóa đơn
+   - Xuất sang PDF
 
-4. **Refund System**
-   - Automated refund processing
-   - Partial refunds
-   - Refund tracking
+4. **Hệ Thống Hoàn Tiền**
+   - Xử lý hoàn tiền tự động
+   - Hoàn tiền một phần
+   - Theo dõi hoàn tiền
 
-## Support
+## Hỗ Trợ
 
-For issues or questions:
-- Check order status in OrdersPage
-- Contact admin for payment verification
-- Reference order ID in all communications
+Khi gặp vấn đề hoặc có câu hỏi:
+- Kiểm tra trạng thái đơn hàng trong OrdersPage
+- Liên hệ admin để xác minh thanh toán
+- Cung cấp mã đơn hàng trong mọi liên lạc

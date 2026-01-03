@@ -1,13 +1,13 @@
-# API Endpoints Reference
+# Tài Liệu Tham Khảo API Endpoints
 
 ## Base URL
 ```
 http://localhost:8000/api/v1
 ```
 
-## Authentication
+## Xác Thực (Authentication)
 
-### Register User
+### Đăng Ký Người Dùng
 ```http
 POST /auth/register
 Content-Type: application/json
@@ -15,7 +15,7 @@ Content-Type: application/json
 {
   "email": "user@example.com",
   "password": "password123",
-  "full_name": "John Doe",
+  "full_name": "Nguyễn Văn A",
   "phone": "+84123456789",
   "role": "student",
   "student_id": "SV001",
@@ -26,7 +26,7 @@ Response: 201 Created
 {
   "id": 1,
   "email": "user@example.com",
-  "full_name": "John Doe",
+  "full_name": "Nguyễn Văn A",
   "role": "student",
   "is_active": true,
   "is_superuser": false,
@@ -34,7 +34,7 @@ Response: 201 Created
 }
 ```
 
-### Login
+### Đăng Nhập
 ```http
 POST /auth/login
 Content-Type: application/x-www-form-urlencoded
@@ -48,7 +48,7 @@ Response: 200 OK
 }
 ```
 
-### Get Current User
+### Lấy Thông Tin Người Dùng Hiện Tại
 ```http
 GET /auth/me
 Authorization: Bearer {access_token}
@@ -57,16 +57,16 @@ Response: 200 OK
 {
   "id": 1,
   "email": "user@example.com",
-  "full_name": "John Doe",
+  "full_name": "Nguyễn Văn A",
   ...
 }
 ```
 
 ---
 
-## Users (Admin Only)
+## Người Dùng (Users) - Chỉ Admin
 
-### List Users
+### Danh Sách Người Dùng
 ```http
 GET /users?skip=0&limit=100
 Authorization: Bearer {admin_token}
@@ -81,7 +81,7 @@ Response: 200 OK
 ]
 ```
 
-### Create User
+### Tạo Người Dùng
 ```http
 POST /users
 Authorization: Bearer {admin_token}
@@ -90,14 +90,14 @@ Content-Type: application/json
 {
   "email": "newuser@example.com",
   "password": "password123",
-  "full_name": "New User",
+  "full_name": "Người Dùng Mới",
   "role": "staff"
 }
 
 Response: 201 Created
 ```
 
-### Get User by ID
+### Lấy Người Dùng Theo ID
 ```http
 GET /users/{user_id}
 Authorization: Bearer {token}
@@ -105,21 +105,21 @@ Authorization: Bearer {token}
 Response: 200 OK
 ```
 
-### Update User
+### Cập Nhật Người Dùng
 ```http
 PUT /users/{user_id}
 Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "full_name": "Updated Name",
+  "full_name": "Tên Đã Cập Nhật",
   "phone": "+84987654321"
 }
 
 Response: 200 OK
 ```
 
-### Delete User
+### Xóa Người Dùng
 ```http
 DELETE /users/{user_id}
 Authorization: Bearer {admin_token}
@@ -129,9 +129,9 @@ Response: 200 OK
 
 ---
 
-## Categories
+## Danh Mục (Categories)
 
-### List Categories
+### Danh Sách Danh Mục
 ```http
 GET /categories?skip=0&limit=100
 
@@ -139,8 +139,8 @@ Response: 200 OK
 [
   {
     "id": 1,
-    "name": "Coffee",
-    "description": "Various coffee drinks",
+    "name": "Cà phê",
+    "description": "Các loại cà phê đa dạng",
     "image_url": "https://...",
     "is_active": true,
     "sort_order": 1,
@@ -149,15 +149,15 @@ Response: 200 OK
 ]
 ```
 
-### Create Category (Admin Only)
+### Tạo Danh Mục (Chỉ Admin)
 ```http
 POST /categories
 Authorization: Bearer {admin_token}
 Content-Type: application/json
 
 {
-  "name": "Coffee",
-  "description": "Various coffee drinks",
+  "name": "Cà phê",
+  "description": "Các loại cà phê đa dạng",
   "image_url": "https://...",
   "sort_order": 1
 }
@@ -165,28 +165,28 @@ Content-Type: application/json
 Response: 201 Created
 ```
 
-### Get Category
+### Lấy Danh Mục
 ```http
 GET /categories/{category_id}
 
 Response: 200 OK
 ```
 
-### Update Category (Admin Only)
+### Cập Nhật Danh Mục (Chỉ Admin)
 ```http
 PUT /categories/{category_id}
 Authorization: Bearer {admin_token}
 Content-Type: application/json
 
 {
-  "name": "Updated Name",
-  "description": "Updated description"
+  "name": "Tên Đã Cập Nhật",
+  "description": "Mô tả đã cập nhật"
 }
 
 Response: 200 OK
 ```
 
-### Delete Category (Admin Only)
+### Xóa Danh Mục (Chỉ Admin)
 ```http
 DELETE /categories/{category_id}
 Authorization: Bearer {admin_token}
@@ -196,9 +196,9 @@ Response: 200 OK
 
 ---
 
-## Products
+## Sản Phẩm (Products)
 
-### List Products
+### Danh Sách Sản Phẩm
 ```http
 GET /products?skip=0&limit=100&category_id=1&available_only=true
 
@@ -207,7 +207,7 @@ Response: 200 OK
   {
     "id": 1,
     "name": "Cappuccino",
-    "description": "Espresso with steamed milk",
+    "description": "Espresso với sữa tươi",
     "price": 45000,
     "category_id": 1,
     "image_url": "https://...",
@@ -218,14 +218,14 @@ Response: 200 OK
 ]
 ```
 
-### Search Products
+### Tìm Kiếm Sản Phẩm
 ```http
 GET /products/search?q=coffee&skip=0&limit=100
 
 Response: 200 OK
 ```
 
-### Create Product (Admin Only)
+### Tạo Sản Phẩm (Chỉ Admin)
 ```http
 POST /products
 Authorization: Bearer {admin_token}
@@ -233,7 +233,7 @@ Content-Type: application/json
 
 {
   "name": "Cappuccino",
-  "description": "Espresso with steamed milk",
+  "description": "Espresso với sữa tươi",
   "price": 45000,
   "category_id": 1,
   "image_url": "https://...",
@@ -245,14 +245,14 @@ Content-Type: application/json
 Response: 201 Created
 ```
 
-### Get Product
+### Lấy Sản Phẩm
 ```http
 GET /products/{product_id}
 
 Response: 200 OK
 ```
 
-### Update Product (Admin Only)
+### Cập Nhật Sản Phẩm (Chỉ Admin)
 ```http
 PUT /products/{product_id}
 Authorization: Bearer {admin_token}
@@ -266,7 +266,7 @@ Content-Type: application/json
 Response: 200 OK
 ```
 
-### Delete Product (Admin Only)
+### Xóa Sản Phẩm (Chỉ Admin)
 ```http
 DELETE /products/{product_id}
 Authorization: Bearer {admin_token}
@@ -276,9 +276,9 @@ Response: 200 OK
 
 ---
 
-## Cart
+## Giỏ Hàng (Cart)
 
-### Get Cart
+### Lấy Giỏ Hàng
 ```http
 GET /cart
 Authorization: Bearer {token}
@@ -300,7 +300,7 @@ Response: 200 OK
 }
 ```
 
-### Add Item to Cart
+### Thêm Sản Phẩm Vào Giỏ
 ```http
 POST /cart/items
 Authorization: Bearer {token}
@@ -314,7 +314,7 @@ Content-Type: application/json
 Response: 201 Created
 ```
 
-### Update Cart Item
+### Cập Nhật Sản Phẩm Trong Giỏ
 ```http
 PUT /cart/items/{item_id}
 Authorization: Bearer {token}
@@ -327,7 +327,7 @@ Content-Type: application/json
 Response: 200 OK
 ```
 
-### Remove Cart Item
+### Xóa Sản Phẩm Khỏi Giỏ
 ```http
 DELETE /cart/items/{item_id}
 Authorization: Bearer {token}
@@ -335,7 +335,7 @@ Authorization: Bearer {token}
 Response: 200 OK
 ```
 
-### Clear Cart
+### Xóa Toàn Bộ Giỏ Hàng
 ```http
 DELETE /cart
 Authorization: Bearer {token}
@@ -345,9 +345,9 @@ Response: 200 OK
 
 ---
 
-## Orders
+## Đơn Hàng (Orders)
 
-### List Orders
+### Danh Sách Đơn Hàng
 ```http
 GET /orders?skip=0&limit=100&status_filter=pending
 Authorization: Bearer {token}
@@ -376,7 +376,7 @@ Response: 200 OK
 ]
 ```
 
-### Create Order from Cart
+### Tạo Đơn Hàng Từ Giỏ
 ```http
 POST /orders
 Authorization: Bearer {token}
@@ -384,14 +384,14 @@ Content-Type: application/json
 
 {
   "table_id": 1,
-  "notes": "No sugar please",
+  "notes": "Không đường",
   "delivery_type": "dine-in"
 }
 
 Response: 201 Created
 ```
 
-### Get Order
+### Lấy Đơn Hàng
 ```http
 GET /orders/{order_id}
 Authorization: Bearer {token}
@@ -399,7 +399,7 @@ Authorization: Bearer {token}
 Response: 200 OK
 ```
 
-### Update Order Status (Admin Only)
+### Cập Nhật Trạng Thái Đơn Hàng (Chỉ Admin)
 ```http
 PUT /orders/{order_id}
 Authorization: Bearer {admin_token}
@@ -413,7 +413,7 @@ Content-Type: application/json
 Response: 200 OK
 ```
 
-### Delete Order (Admin Only)
+### Xóa Đơn Hàng (Chỉ Admin)
 ```http
 DELETE /orders/{order_id}
 Authorization: Bearer {admin_token}
@@ -423,9 +423,9 @@ Response: 200 OK
 
 ---
 
-## Tables
+## Bàn (Tables)
 
-### List Tables
+### Danh Sách Bàn
 ```http
 GET /tables?skip=0&limit=100&status_filter=available
 
@@ -436,21 +436,21 @@ Response: 200 OK
     "table_number": "T01",
     "capacity": 4,
     "status": "available",
-    "location": "Ground Floor",
+    "location": "Tầng trệt",
     "is_active": true,
     ...
   }
 ]
 ```
 
-### Get Available Tables
+### Lấy Bàn Trống
 ```http
 GET /tables/available?skip=0&limit=100
 
 Response: 200 OK
 ```
 
-### Create Table (Admin Only)
+### Tạo Bàn (Chỉ Admin)
 ```http
 POST /tables
 Authorization: Bearer {admin_token}
@@ -459,20 +459,20 @@ Content-Type: application/json
 {
   "table_number": "T01",
   "capacity": 4,
-  "location": "Ground Floor"
+  "location": "Tầng trệt"
 }
 
 Response: 201 Created
 ```
 
-### Get Table
+### Lấy Bàn
 ```http
 GET /tables/{table_id}
 
 Response: 200 OK
 ```
 
-### Update Table (Admin Only)
+### Cập Nhật Bàn (Chỉ Admin)
 ```http
 PUT /tables/{table_id}
 Authorization: Bearer {admin_token}
@@ -486,7 +486,7 @@ Content-Type: application/json
 Response: 200 OK
 ```
 
-### Delete Table (Admin Only)
+### Xóa Bàn (Chỉ Admin)
 ```http
 DELETE /tables/{table_id}
 Authorization: Bearer {admin_token}
@@ -496,33 +496,33 @@ Response: 200 OK
 
 ---
 
-## Error Responses
+## Phản Hồi Lỗi (Error Responses)
 
 ### 400 Bad Request
 ```json
 {
-  "detail": "Error message"
+  "detail": "Thông báo lỗi"
 }
 ```
 
 ### 401 Unauthorized
 ```json
 {
-  "detail": "Could not validate credentials"
+  "detail": "Không thể xác thực thông tin đăng nhập"
 }
 ```
 
 ### 403 Forbidden
 ```json
 {
-  "detail": "Not enough permissions"
+  "detail": "Không đủ quyền"
 }
 ```
 
 ### 404 Not Found
 ```json
 {
-  "detail": "Resource not found"
+  "detail": "Không tìm thấy tài nguyên"
 }
 ```
 
@@ -541,27 +541,27 @@ Response: 200 OK
 
 ---
 
-## Enums
+## Enums (Giá Trị Cố Định)
 
-### UserRole
-- `admin` - Administrator
-- `staff` - Staff member
-- `student` - Student/Customer
+### UserRole (Vai Trò Người Dùng)
+- `admin` - Quản trị viên
+- `staff` - Nhân viên
+- `student` - Sinh viên/Khách hàng
 
-### OrderStatus
-- `pending` - Order placed, awaiting confirmation
-- `confirmed` - Order confirmed
-- `preparing` - Order being prepared
-- `ready` - Order ready for pickup/delivery
-- `completed` - Order completed
-- `cancelled` - Order cancelled
+### OrderStatus (Trạng Thái Đơn Hàng)
+- `pending` - Đơn hàng đã đặt, chờ xác nhận
+- `confirmed` - Đơn hàng đã xác nhận
+- `preparing` - Đang chuẩn bị
+- `ready` - Sẵn sàng lấy/giao
+- `completed` - Hoàn thành
+- `cancelled` - Đã hủy
 
-### PaymentStatus
-- `unpaid` - Not paid yet
-- `paid` - Payment received
-- `refunded` - Payment refunded
+### PaymentStatus (Trạng Thái Thanh Toán)
+- `unpaid` - Chưa thanh toán
+- `paid` - Đã thanh toán
+- `refunded` - Đã hoàn tiền
 
-### TableStatus
-- `available` - Table is available
-- `occupied` - Table is occupied
-- `reserved` - Table is reserved
+### TableStatus (Trạng Thái Bàn)
+- `available` - Bàn trống
+- `occupied` - Đang sử dụng
+- `reserved` - Đã đặt trước

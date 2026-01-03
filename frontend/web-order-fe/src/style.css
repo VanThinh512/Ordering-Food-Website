@@ -548,11 +548,15 @@
 
 .product-modal {
     width: min(940px, calc(100vw - 2rem));
+    max-height: calc(100vh - 4rem);
     background: rgba(8, 10, 30, 0.95);
     border-radius: 32px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     padding: 0;
     box-shadow: 0 45px 95px rgba(5, 6, 17, 0.85);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .product-modal-header {
@@ -560,6 +564,7 @@
     justify-content: space-between;
     gap: 1.5rem;
     padding: 2.5rem 2.5rem 1.5rem;
+    flex-shrink: 0;
 }
 
 .product-modal-header h2 {
@@ -588,6 +593,27 @@
     display: flex;
     flex-direction: column;
     gap: 2rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+.product-modal-form::-webkit-scrollbar {
+    width: 8px;
+}
+
+.product-modal-form::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+}
+
+.product-modal-form::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+}
+
+.product-modal-form::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
 }
 
 .product-modal-body {
@@ -694,6 +720,10 @@
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
+    flex-shrink: 0;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: auto;
 }
 
 .product-modal-footer .btn-primary,
@@ -5784,6 +5814,9 @@ flex-direction: column;
     padding: 1.25rem 1rem;
     vertical-align: middle;
     color: rgba(226, 232, 240, 0.85);
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .user-id {
@@ -5817,6 +5850,12 @@ flex-direction: column;
     color: rgba(102, 126, 234, 0.9);
     text-decoration: none;
     transition: all 0.3s ease;
+    word-break: break-word;
+    display: inline-block;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .email-link:hover {
@@ -5833,6 +5872,10 @@ flex-direction: column;
     font-weight: 700;
     font-size: 0.875rem;
     border: 1px solid;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .status-badge {
@@ -5840,6 +5883,11 @@ flex-direction: column;
     border-radius: 999px;
     font-weight: 600;
     font-size: 0.875rem;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
 }
 
 .status-badge.active {
@@ -5978,6 +6026,8 @@ flex-direction: column;
     z-index: 1000;
     padding: 2rem;
     animation: fadeIn 0.3s ease;
+    overflow: hidden;
+    overscroll-behavior: contain;
 }
 
 @keyframes fadeIn {
@@ -6001,10 +6051,11 @@ flex-direction: column;
         0 0 0 1px rgba(255, 255, 255, 0.05) inset;
     width: 100%;
     max-width: 700px;
-    max-height: 90vh;
+    max-height: calc(100vh - 4rem);
     display: flex;
     flex-direction: column;
     animation: slideUp 0.3s ease;
+    overflow: hidden;
 }
 
 @keyframes slideUp {
@@ -6026,6 +6077,7 @@ flex-direction: column;
     justify-content: space-between;
     align-items: center;
     background: rgba(255, 255, 255, 0.02);
+    flex-shrink: 0;
 }
 
 .modal-title {
@@ -6061,26 +6113,38 @@ flex-direction: column;
 
 .modal-body {
     padding: 2.5rem;
+    padding-right: 1.5rem;
     overflow-y: auto;
+    overflow-x: hidden;
     flex: 1;
+    min-height: 0;
+    overscroll-behavior: contain;
+}
+
+.modal-body form {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
 }
 
 .modal-body::-webkit-scrollbar {
-    width: 8px;
+    width: 12px;
 }
 
 .modal-body::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 10px;
+    margin: 10px 0;
 }
 
 .modal-body::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 179, 71, 0.5);
     border-radius: 10px;
+    border: 2px solid rgba(20, 21, 33, 0.8);
 }
 
 .modal-body::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 179, 71, 0.7);
 }
 
 /* Form */
@@ -6222,6 +6286,8 @@ flex-direction: column;
 /* Modal Footer */
 .modal-footer {
     padding: 1.5rem 2.5rem;
+    padding-top: 2rem;
+    margin-top: auto;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: flex-end;
@@ -6600,7 +6666,7 @@ flex-direction: column;
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 20px 50px rgba(5, 6, 17, 0.5);
     overflow: hidden;
-    backdrop-filter: blur(10px);
+    /* backdrop-filter: blur(10px); */
 }
 
 .statistics-page .panel-header {
