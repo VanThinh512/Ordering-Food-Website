@@ -38,7 +38,7 @@ class User(SQLModel, table=True):
     # Google OAuth
     google_id: Optional[str] = Field(
         default=None,
-        sa_column=Column("google_id", Unicode(255), nullable=True, unique=True, index=True),
+        sa_column=Column("google_id", Unicode(255), nullable=True, index=True),
         max_length=255
     )
     google_email: Optional[str] = Field(

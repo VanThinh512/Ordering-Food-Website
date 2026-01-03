@@ -83,11 +83,37 @@ def delete_category(
     current_user: User = Depends(get_current_active_superuser),
 ) -> Any:
     """Delete a category (admin only)."""
+    from app.models.product import Product
+    from app.models.order import OrderItem
+    from app.models.cart import CartItem
+    
     category = category_crud.get(db, id=category_id)
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Category not found",
         )
+    
+    # Check if category has any products
+    products = db.query(Product).filter(Product.category_id == category_id).all()
+    if products:
+        # Check if any of these products are in orders
+        product_ids = [p.id for p in products]
+        order_items = db.query(OrderItem).filter(OrderItem.product_id.in_(product_ids)).first()
+        
+        if order_items:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Không thể xóa danh mục này vì có {len(products)} món ăn đã được sử dụng trong đơn hàng. Vui lòng xóa hoặc chuyển các món ăn sang danh mục khác trước.",
+            )
+        
+        # Delete cart items first
+        db.query(CartItem).filter(CartItem.product_id.in_(product_ids)).delete(synchronize_session=False)
+        
+        # Delete all products in this category
+        db.query(Product).filter(Product.category_id == category_id).delete(synchronize_session=False)
+        db.commit()
+    
+    # Now delete the category
     category = category_crud.delete(db, id=category_id)
     return category

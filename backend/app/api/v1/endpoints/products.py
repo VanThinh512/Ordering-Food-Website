@@ -96,11 +96,28 @@ def delete_product(
     current_user: User = Depends(get_current_active_superuser),
 ) -> Any:
     """Delete a product (admin only)."""
+    from app.models.order import OrderItem
+    from app.models.cart import CartItem
+    
     product = product_crud.get(db, id=product_id)
     if not product:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found",
         )
+    
+    # Check if product exists in any orders
+    order_items = db.query(OrderItem).filter(OrderItem.product_id == product_id).first()
+    if order_items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể xóa món ăn này vì đã có trong đơn hàng. Bạn có thể đặt trạng thái 'Không khả dụng' thay vì xóa.",
+        )
+    
+    # Delete related cart items first
+    db.query(CartItem).filter(CartItem.product_id == product_id).delete()
+    db.commit()
+    
+    # Now delete the product
     product = product_crud.delete(db, id=product_id)
     return product

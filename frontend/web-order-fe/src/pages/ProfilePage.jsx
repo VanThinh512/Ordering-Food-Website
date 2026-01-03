@@ -487,6 +487,15 @@ const ProfilePage = () => {
                                                 <span className="tool-arrow">→</span>
                                             </Link>
 
+                                            <Link to="/admin/statistics" className="management-tool-card">
+                                                <div className="tool-icon">📈</div>
+                                                <div className="tool-content">
+                                                    <h4>Thống kê & Báo cáo</h4>
+                                                    <p>Biểu đồ doanh thu, đơn hàng</p>
+                                                </div>
+                                                <span className="tool-arrow">→</span>
+                                            </Link>
+
                                             <Link to="/admin/products" className="management-tool-card">
                                                 <div className="tool-icon">🍔</div>
                                                 <div className="tool-content">
