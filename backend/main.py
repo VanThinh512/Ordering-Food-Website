@@ -1,7 +1,6 @@
 """FastAPI application entry point."""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from app.core.config import settings
 from app.api.v1.router import api_router
 from app.db.session import SessionLocal
@@ -24,6 +23,7 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+@app
 
 
 @app.on_event("startup")
