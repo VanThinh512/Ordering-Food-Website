@@ -91,8 +91,8 @@ const orderService = {
                 throw new Error('Vui lòng đăng nhập');
             }
 
-            const response = await axios.patch(
-                `${API_URL}/orders/${id}/status`,
+            const response = await axios.put(
+                `${API_URL}/orders/${id}`,
                 { status },
                 {
                     headers: {

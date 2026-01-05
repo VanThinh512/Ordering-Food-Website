@@ -17,7 +17,6 @@ const UserManagementPage = () => {
     const [submitting, setSubmitting] = useState(false);
 
     const [formData, setFormData] = useState({
-        username: '',
         email: '',
         full_name: '',
         phone: '',
@@ -48,6 +47,19 @@ const UserManagementPage = () => {
 
         loadUsers();
     }, [isAuthenticated, user]);
+
+    // Disable body scroll when modal is open
+    useEffect(() => {
+        if (showModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [showModal]);
 
     const loadUsers = async () => {
         try {
@@ -102,7 +114,6 @@ const UserManagementPage = () => {
 
         if (mode === 'add') {
             setFormData({
-                username: '',
                 email: '',
                 full_name: '',
                 phone: '',
@@ -112,7 +123,6 @@ const UserManagementPage = () => {
             });
         } else if (mode === 'edit' && userData) {
             setFormData({
-                username: userData.username,
                 email: userData.email,
                 full_name: userData.full_name || '',
                 phone: userData.phone || '',
@@ -122,7 +132,6 @@ const UserManagementPage = () => {
             });
         } else if (mode === 'view' && userData) {
             setFormData({
-                username: userData.username,
                 email: userData.email,
                 full_name: userData.full_name || '',
                 phone: userData.phone || '',
@@ -140,7 +149,6 @@ const UserManagementPage = () => {
         setShowModal(false);
         setSelectedUser(null);
         setFormData({
-            username: '',
             email: '',
             full_name: '',
             phone: '',
@@ -169,13 +177,6 @@ const UserManagementPage = () => {
 
     const validateForm = () => {
         const errors = {};
-
-        // Username validation
-        if (!formData.username.trim()) {
-            errors.username = 'Tên đăng nhập không được để trống';
-        } else if (formData.username.length < 3) {
-            errors.username = 'Tên đăng nhập phải có ít nhất 3 ký tự';
-        }
 
         // Email validation
         if (!formData.email.trim()) {
@@ -215,7 +216,6 @@ const UserManagementPage = () => {
 
         try {
             const userData = {
-                username: formData.username.trim(),
                 email: formData.email.trim(),
                 full_name: formData.full_name.trim() || null,
                 phone: formData.phone.trim() || null,
@@ -262,37 +262,17 @@ const UserManagementPage = () => {
         }
     };
 
-    const handleDelete = async (userId, username) => {
-        if (!window.confirm(`Bạn có chắc muốn xóa người dùng "${username}"?\nHành động này không thể hoàn tác.`)) {
-            return;
-        }
 
-        // Không cho phép xóa chính mình
-        if (userId === user.id) {
-            alert('❌ Bạn không thể xóa tài khoản của chính mình!');
-            return;
-        }
-
-        try {
-            console.log('🗑️ Deleting user:', userId);
-            await userService.delete(userId);
-            alert('✅ Xóa người dùng thành công!');
-            await loadUsers();
-        } catch (error) {
-            console.error('❌ Error deleting user:', error);
-            alert(error.response?.data?.detail || 'Không thể xóa người dùng');
-        }
-    };
 
     // Ban user function
-    const handleBanUser = async (userId, username) => {
+    const handleBanUser = async (userId, userEmail) => {
         // Không cho phép ban chính mình
         if (userId === user.id) {
             alert('❌ Bạn không thể khóa tài khoản của chính mình!');
             return;
         }
 
-        const reason = window.prompt(`Bạn có chắc muốn khóa tài khoản "${username}"?\n\nVui lòng nhập lý do khóa tài khoản:`);
+        const reason = window.prompt(`Bạn có chắc muốn khóa tài khoản "${userEmail}"?\n\nVui lòng nhập lý do khóa tài khoản:`);
 
         if (reason === null) {
             return; // User cancelled
@@ -306,7 +286,7 @@ const UserManagementPage = () => {
         try {
             console.log('🚫 Banning user:', userId);
             await userService.banUser(userId);
-            alert(`✅ Đã khóa tài khoản "${username}" thành công!\nLý do: ${reason}`);
+            alert(`✅ Đã khóa tài khoản "${userEmail}" thành công!\nLý do: ${reason}`);
             await loadUsers();
         } catch (error) {
             console.error('❌ Error banning user:', error);
@@ -315,15 +295,15 @@ const UserManagementPage = () => {
     };
 
     // Unban user function
-    const handleUnbanUser = async (userId, username) => {
-        if (!window.confirm(`Bạn có chắc muốn mở khóa tài khoản "${username}"?`)) {
+    const handleUnbanUser = async (userId, userEmail) => {
+        if (!window.confirm(`Bạn có chắc muốn mở khóa tài khoản "${userEmail}"?`)) {
             return;
         }
 
         try {
             console.log('✅ Unbanning user:', userId);
             await userService.unbanUser(userId);
-            alert(`✅ Đã mở khóa tài khoản "${username}" thành công!`);
+            alert(`✅ Đã mở khóa tài khoản "${userEmail}" thành công!`);
             await loadUsers();
         } catch (error) {
             console.error('❌ Error unbanning user:', error);
@@ -464,7 +444,6 @@ const UserManagementPage = () => {
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Tên đăng nhập</th>
                                     <th>Họ tên</th>
                                     <th>Email</th>
                                     <th>Số điện thoại</th>
@@ -486,13 +465,12 @@ const UserManagementPage = () => {
                                             </td>
                                             <td>
                                                 <div className="username-cell">
-                                                    <strong>{u.username}</strong>
+                                                    <strong>{u.full_name || u.email}</strong>
                                                     {isCurrentUser && (
                                                         <span className="current-badge">Bạn</span>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td>{u.full_name || '-'}</td>
                                             <td>
                                                 <a href={`mailto:${u.email}`} className="email-link">
                                                     {u.email}
@@ -542,7 +520,7 @@ const UserManagementPage = () => {
                                                     {u.is_active ? (
                                                         <button
                                                             className="btn-action btn-ban"
-                                                            onClick={() => handleBanUser(u.id, u.username)}
+                                                            onClick={() => handleBanUser(u.id, u.email)}
                                                             disabled={isCurrentUser}
                                                             title={isCurrentUser ? 'Không thể khóa tài khoản của bạn' : 'Khóa tài khoản'}
                                                         >
@@ -551,21 +529,12 @@ const UserManagementPage = () => {
                                                     ) : (
                                                         <button
                                                             className="btn-action btn-unban"
-                                                            onClick={() => handleUnbanUser(u.id, u.username)}
+                                                            onClick={() => handleUnbanUser(u.id, u.email)}
                                                             title="Mở khóa tài khoản"
                                                         >
                                                             🔓
                                                         </button>
                                                     )}
-
-                                                    <button
-                                                        className="btn-action btn-delete"
-                                                        onClick={() => handleDelete(u.id, u.username)}
-                                                        disabled={isCurrentUser}
-                                                        title={isCurrentUser ? 'Không thể xóa tài khoản của bạn' : 'Xóa'}
-                                                    >
-                                                        🗑️
-                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -589,28 +558,9 @@ const UserManagementPage = () => {
                                 <button className="modal-close" onClick={closeModal}>✕</button>
                             </div>
 
-                            <form onSubmit={handleSubmit}>
-                                <div className="modal-body">
+                            <div className="modal-body">
+                                <form onSubmit={handleSubmit}>
                                     <div className="form-grid">
-                                        {/* Username */}
-                                        <div className="form-group">
-                                            <label className="form-label">
-                                                Tên đăng nhập <span className="required">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                name="username"
-                                                value={formData.username}
-                                                onChange={handleInputChange}
-                                                disabled={modalMode === 'view' || modalMode === 'edit'}
-                                                className={`form-input ${formErrors.username ? 'error' : ''}`}
-                                                placeholder="Nhập tên đăng nhập"
-                                            />
-                                            {formErrors.username && (
-                                                <span className="error-message">{formErrors.username}</span>
-                                            )}
-                                        </div>
-
                                         {/* Email */}
                                         <div className="form-group">
                                             <label className="form-label">
@@ -621,7 +571,7 @@ const UserManagementPage = () => {
                                                 name="email"
                                                 value={formData.email}
                                                 onChange={handleInputChange}
-                                                disabled={modalMode === 'view'}
+                                                disabled={modalMode === 'view' || modalMode === 'edit'}
                                                 className={`form-input ${formErrors.email ? 'error' : ''}`}
                                                 placeholder="Nhập email"
                                             />
@@ -736,27 +686,27 @@ const UserManagementPage = () => {
                                             )}
                                         </div>
                                     )}
-                                </div>
 
-                                <div className="modal-footer">
-                                    <button
-                                        type="button"
-                                        className="btn-cancel"
-                                        onClick={closeModal}
-                                    >
-                                        {modalMode === 'view' ? 'Đóng' : 'Hủy'}
-                                    </button>
-                                    {modalMode !== 'view' && (
+                                    <div className="modal-footer">
                                         <button
-                                            type="submit"
-                                            className="btn-submit"
-                                            disabled={submitting}
+                                            type="button"
+                                            className="btn-cancel"
+                                            onClick={closeModal}
                                         >
-                                            {submitting ? 'Đang xử lý...' : (modalMode === 'add' ? 'Thêm mới' : 'Cập nhật')}
+                                            {modalMode === 'view' ? 'Đóng' : 'Hủy'}
                                         </button>
-                                    )}
-                                </div>
-                            </form>
+                                        {modalMode !== 'view' && (
+                                            <button
+                                                type="submit"
+                                                className="btn-submit"
+                                                disabled={submitting}
+                                            >
+                                                {submitting ? 'Đang xử lý...' : (modalMode === 'add' ? 'Thêm mới' : 'Cập nhật')}
+                                            </button>
+                                        )}
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -26,6 +26,12 @@ class PaymentStatus(str, Enum):
     REFUNDED = "refunded"
 
 
+class PaymentMethod(str, Enum):
+    """Payment method types."""
+    CASH = "cash"
+    ONLINE = "online"
+
+
 class TableStatus(str, Enum):
     """Table status types."""
     AVAILABLE = "available"

@@ -1,7 +1,8 @@
 """Helpers for deriving table status from reservations."""
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Iterable, List, Optional
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlmodel import Session, select
 
@@ -16,6 +17,20 @@ ACTIVE_RESERVATION_STATUSES = (
     ReservationStatus.ACTIVE,
 )
 
+try:
+    VIETNAM_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+except ZoneInfoNotFoundError:
+    VIETNAM_TZ = timezone(timedelta(hours=7))
+
+
+def _ensure_vietnam_time(dt: Optional[datetime]) -> Optional[datetime]:
+    """Attach Vietnam timezone if missing and convert aware datetimes."""
+    if not dt:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=VIETNAM_TZ)
+    return dt.astimezone(VIETNAM_TZ)
+
 
 def _apply_status_for_window(
     tables: List[Table],
@@ -27,12 +42,21 @@ def _apply_status_for_window(
     for reservation in reservations:
         reservations_by_table[reservation.table_id].append(reservation)
 
-    now = datetime.utcnow()
-    is_current_window = target_start <= now < target_end
+    now_local = datetime.now(VIETNAM_TZ)
+    local_start = _ensure_vietnam_time(target_start)
+    local_end = _ensure_vietnam_time(target_end)
+
+    is_current_window = (
+        local_start is not None
+        and local_end is not None
+        and local_start <= now_local < local_end
+    )
 
     for table in tables:
         if reservations_by_table.get(table.id):
-            table.status = TableStatus.OCCUPIED if is_current_window else TableStatus.RESERVED
+            table.status = (
+                TableStatus.OCCUPIED if is_current_window else TableStatus.RESERVED
+            )
         else:
             table.status = TableStatus.AVAILABLE
     return tables
@@ -57,23 +81,31 @@ def annotate_tables_with_reservations(
     target_window = target_start and target_end
 
     if target_window:
+        target_start_naive = target_start
+        target_end_naive = target_end
         reservations = db.exec(
             select(TableReservation).where(
                 TableReservation.table_id.in_(table_ids),
                 TableReservation.status.in_(ACTIVE_RESERVATION_STATUSES),
-                TableReservation.start_time < target_end,
-                TableReservation.end_time > target_start,
+                TableReservation.start_time < target_end_naive,
+                TableReservation.end_time > target_start_naive,
             )
         ).all()
-        return _apply_status_for_window(tables, reservations, target_start, target_end)
+        return _apply_status_for_window(
+            tables,
+            reservations,
+            _ensure_vietnam_time(target_start),
+            _ensure_vietnam_time(target_end),
+        )
 
-    now = datetime.utcnow()
+    now_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
+    now_local = now_utc.astimezone(VIETNAM_TZ)
 
     reservations = db.exec(
         select(TableReservation).where(
             TableReservation.table_id.in_(table_ids),
             TableReservation.status.in_(ACTIVE_RESERVATION_STATUSES),
-            TableReservation.end_time >= now,
+            TableReservation.end_time >= now_utc.replace(tzinfo=None),
         )
     ).all()
 
@@ -81,9 +113,11 @@ def annotate_tables_with_reservations(
     future_map = defaultdict(list)
 
     for reservation in reservations:
-        if reservation.start_time <= now < reservation.end_time:
+        start_local = _ensure_vietnam_time(reservation.start_time)
+        end_local = _ensure_vietnam_time(reservation.end_time)
+        if start_local and end_local and start_local <= now_local < end_local:
             current_map[reservation.table_id].append(reservation)
-        elif reservation.start_time > now:
+        elif start_local and start_local > now_local:
             future_map[reservation.table_id].append(reservation)
 
     for table in tables:

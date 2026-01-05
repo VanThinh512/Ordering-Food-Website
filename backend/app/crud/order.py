@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 from app.crud.base import CRUDBase
 from app.models.order import Order, OrderItem
 from app.schemas.order import OrderCreate
-from app.utils.enums import OrderStatus
+from app.utils.enums import OrderStatus, PaymentMethod
 
 
 class CRUDOrder(CRUDBase[Order, OrderCreate, dict]):
@@ -80,6 +80,7 @@ class CRUDOrder(CRUDBase[Order, OrderCreate, dict]):
             total_amount=total_amount,
             notes=obj_in.notes,
             delivery_type=obj_in.delivery_type,
+            payment_method=obj_in.payment_method or PaymentMethod.CASH,
         )
         db.add(order)
         db.commit()

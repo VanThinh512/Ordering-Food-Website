@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useOrderStore } from '../stores/orderStore';
 import { formatPrice, formatDate } from '../utils/helpers';
 import { ORDER_STATUS_LABELS } from '../types';
+import PaymentModal from '../components/common/PaymentModal';
 
 const OrdersPage = () => {
     const { orders, fetchMyOrders, cancelOrder } = useOrderStore();
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
 
     useEffect(() => {
         loadOrders();
@@ -106,41 +109,43 @@ const OrdersPage = () => {
         const endSource = getReservationEndTime(order);
         const fallbackSource = order.created_at;
 
-        const startDate = startSource ? new Date(startSource) : fallbackSource ? new Date(fallbackSource) : null;
+        const startDate = startSource ? new Date(startSource) : null;
         const endDate = endSource ? new Date(endSource) : null;
-
-        const formatTime = (date) =>
-            date
-                ? new Intl.DateTimeFormat('vi-VN', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }).format(date)
-                : null;
-
-        const formatDatePart = (date) =>
-            date
-                ? new Intl.DateTimeFormat('vi-VN', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                }).format(date)
-                : 'N/A';
-
-        const startLabel = formatTime(startDate);
-        const endLabel = formatTime(endDate);
-
         const fallbackDate = fallbackSource ? new Date(fallbackSource) : null;
-        const startDateFormatted = startDate ? formatDatePart(startDate) : formatDatePart(fallbackDate);
-        const endDateFormatted = endDate ? formatDatePart(endDate) : null;
+
+        const timeFormatter = new Intl.DateTimeFormat('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Asia/Ho_Chi_Minh'
+        });
+        const dateFormatter = new Intl.DateTimeFormat('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            timeZone: 'Asia/Ho_Chi_Minh'
+        });
+
+        const startLabel = startDate ? timeFormatter.format(startDate) : null;
+        const endLabel = endDate ? timeFormatter.format(endDate) : null;
+        const fallbackTime = fallbackDate ? timeFormatter.format(fallbackDate) : 'N/A';
+        const fallbackDateLabel = fallbackDate ? dateFormatter.format(fallbackDate) : 'N/A';
+
+        const primaryStartDateLabel = startDate ? dateFormatter.format(startDate) : null;
+        const primaryEndDateLabel = endDate ? dateFormatter.format(endDate) : null;
 
         const dateLabel =
-            endDateFormatted && endDateFormatted !== startDateFormatted
-                ? `${startDateFormatted} → ${endDateFormatted}`
-                : startDateFormatted;
+            primaryStartDateLabel
+                ? primaryEndDateLabel && primaryEndDateLabel !== primaryStartDateLabel
+                    ? `${primaryStartDateLabel} → ${primaryEndDateLabel}`
+                    : primaryStartDateLabel
+                : fallbackDateLabel;
 
-        const timeLabel = endLabel
-            ? `${startLabel || formatTime(fallbackDate)} - ${endLabel}`
-            : startLabel || formatTime(fallbackDate) || 'N/A';
+        const hasReservationWindow = Boolean(startLabel || endLabel);
+        const timeLabel = hasReservationWindow
+            ? endLabel
+                ? `${startLabel || fallbackTime} - ${endLabel}`
+                : startLabel
+            : fallbackTime;
 
         return { timeLabel, dateLabel };
     };
@@ -220,6 +225,66 @@ const OrdersPage = () => {
             }
         }
     };
+
+    const handleRetryPayment = (order) => {
+        setSelectedOrder(order);
+        setShowPaymentModal(true);
+    };
+
+    const handleConfirmRetryPayment = async (paymentMethod) => {
+        if (!selectedOrder) return;
+
+        try {
+            const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+
+            // If user chooses cash, update payment method
+            if (paymentMethod === 'cash') {
+                const response = await fetch(`http://localhost:8000/api/v1/orders/${selectedOrder.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        payment_method: paymentMethod
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Đã chuyển sang thanh toán tiền mặt');
+                    setShowPaymentModal(false);
+                    await loadOrders();
+                }
+            } else {
+                // For online payment, just show QR and instruction
+                setShowPaymentModal(false);
+                alert('Vui lòng hoàn tất chuyển khoản theo QR code vừa hiển thị.\n\nTrạng thái thanh toán sẽ được cập nhật sau khi admin xác nhận.');
+            }
+        } catch (error) {
+            console.error('Retry payment error:', error);
+            alert('Có lỗi xảy ra. Vui lòng thử lại.');
+        }
+    };
+
+    const getPaymentStatusLabel = (paymentStatus) => {
+        const labels = {
+            unpaid: 'Chưa thanh toán',
+            paid: 'Đã thanh toán',
+            refunded: 'Đã hoàn tiền'
+        };
+        return labels[paymentStatus] || paymentStatus;
+    };
+
+    const getPaymentStatusClass = (paymentStatus) => {
+        const classes = {
+            unpaid: 'payment-unpaid',
+            paid: 'payment-paid',
+            refunded: 'payment-refunded'
+        };
+        return classes[paymentStatus] || '';
+    };
+
+    // --- Đã xóa các dấu ngoặc thừa ở đây ---
 
     if (loading) {
         return (
@@ -364,6 +429,12 @@ const OrdersPage = () => {
                                     <strong>{order.items.length}</strong>
                                 </div>
                                 <div className="meta-pill">
+                                    <span className="meta-label">Thanh toán</span>
+                                    <strong className={getPaymentStatusClass(order.payment_status)}>
+                                        {getPaymentStatusLabel(order.payment_status)}
+                                    </strong>
+                                </div>
+                                <div className="meta-pill">
                                     <span className="meta-label">Tổng cộng</span>
                                     <strong>{formatPrice(calculateOrderTotal(order))}</strong>
                                 </div>
@@ -393,16 +464,38 @@ const OrdersPage = () => {
                                     <strong>{formatPrice(calculateOrderTotal(order))}</strong>
                                 </div>
 
-                                {order.status === 'pending' && (
-                                    <button className="btn-cancel-order" onClick={() => handleCancelOrder(order.id)}>
-                                        Hủy đơn hàng
-                                    </button>
-                                )}
+                                <div className="order-actions">
+                                    {order.status === 'pending' && (
+                                        <button className="btn-cancel-order" onClick={() => handleCancelOrder(order.id)}>
+                                            Hủy đơn hàng
+                                        </button>
+                                    )}
+
+                                    {order.payment_status === 'unpaid' && order.payment_method === 'online' && order.status !== 'cancelled' && (
+                                        <button className="btn-retry-payment" onClick={() => handleRetryPayment(order)}>
+                                            💳 Thanh toán lại
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
+
+            {/* Payment Modal for retry */}
+            {selectedOrder && (
+                <PaymentModal
+                    isOpen={showPaymentModal}
+                    onClose={() => {
+                        setShowPaymentModal(false);
+                        setSelectedOrder(null);
+                    }}
+                    orderAmount={calculateOrderTotal(selectedOrder)}
+                    orderId={selectedOrder.id}
+                    onConfirmPayment={handleConfirmRetryPayment}
+                />
+            )}
         </div>
     );
 };
